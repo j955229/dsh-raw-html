@@ -12,11 +12,11 @@
 
 > 真实会话中的 VCP 卡片渲染效果（宣传图 5 张）：
 
-![效果图 1](docs/images/banner-1.png)
-![效果图 2](docs/images/banner-2.png)
-![效果图 3](docs/images/banner-3.png)
-![效果图 4](docs/images/banner-4.png)
-![效果图 5](docs/images/banner-5.png)
+![效果图 1](docs/images/banner-1.jpg)
+![效果图 2](docs/images/banner-2.jpg)
+![效果图 3](docs/images/banner-3.jpg)
+![效果图 4](docs/images/banner-4.jpg)
+![效果图 5](docs/images/banner-5.jpg)
 
 ## 📣 本次更新（v0.3.0 · 克莉丝审计整改）
 

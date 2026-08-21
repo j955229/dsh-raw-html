@@ -14,11 +14,11 @@ in the browser → the browser renders HTML, the agent follows the design spec
 
 > VCP cards rendered in real conversations (5 promo banners):
 
-![Banner 1](docs/images/banner-1.png)
-![Banner 2](docs/images/banner-2.png)
-![Banner 3](docs/images/banner-3.png)
-![Banner 4](docs/images/banner-4.png)
-![Banner 5](docs/images/banner-5.png)
+![Banner 1](docs/images/banner-1.jpg)
+![Banner 2](docs/images/banner-2.jpg)
+![Banner 3](docs/images/banner-3.jpg)
+![Banner 4](docs/images/banner-4.jpg)
+![Banner 5](docs/images/banner-5.jpg)
 
 ## 📣 What's New (v0.3.0 · audit hardening)
 
