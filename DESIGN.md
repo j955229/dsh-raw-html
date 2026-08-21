@@ -10,26 +10,23 @@
 
 > `/fonts/` 服务解析两个来源：① **插件内置精选**（assets/fonts，随插件分发，任何电脑装上即可用，woff2 子集共 8.9MB）；② **外置大库**（settings `raw-html.fontsRoot` 可配置，默认 `I:\字体`，本机 219 款全量；其他电脑可指向自己的字体库或留空）。
 
-### 0.0 内置精选（随插件分发 · 无需配置 · 直接可用）
+### 0.0 内置精选（随插件分发 · 无需配置 · 直接可用 · 全部开源授权）
 
-> 用法：`@font-face{font-family:'Lanxi-瘦金书';src:url('/fonts/Lanxi-ShouJin.woff2');}` 后引用。由 `tools/subset_fonts.py` 生成（GB2312 一级 3755 字 + 标点 + 数字序号）。
+> 用法：`@font-face{font-family:'Lanxi-WenKai';src:url('/fonts/Lanxi-WenKai.woff2');}` 后引用。由 `tools/subset_fonts.py` 生成（GB2312 一级 3755 字 + 标点 + 数字序号）。全部为开源授权字体（OFL/Apache），随包分发无授权风险。
 
-| 领域 | font-family 名 | /fonts/ 路径 | 体积 |
-|---|---|---|---|
-| 书法 | `Lanxi-瘦金书` | Lanxi-ShouJin.woff2 | 979KB |
-| 书法 | `Lanxi-隶书` | Lanxi-LiShu.woff2 | 771KB |
-| 手写 | `Lanxi-叶根友` | Lanxi-YeGenYou.woff2 | 518KB |
-| 行草 | `Lanxi-行草` | Lanxi-XingCao.woff2 | 757KB |
-| 艺术 | `Lanxi-黄金时代` | Lanxi-GoldenEra.woff2 | 762KB |
-| 优雅 | `Lanxi-静黑超细` | Lanxi-JingHeiUltraLight.woff2 | 493KB |
-| 海报 | `Lanxi-海报体` | Lanxi-HaiBao.woff2 | 675KB |
-| 影视 | `Lanxi-新综艺` | Lanxi-XinZongYi.woff2 | 363KB |
-| 可爱 | `Lanxi-喵喵` | Lanxi-MiaoMiao.woff2 | 1.1MB |
-| 手绘 | `Lanxi-叮叮` | Lanxi-DingDing.woff2 | 1.75MB |
-| 宋体 | `Lanxi-品宋` | Lanxi-PinSong.woff2 | 931KB |
-| 花体 | `Lanxi-GreatVibes` | Lanxi-GreatVibes.woff2 | 13KB |
+| 领域 | font-family 名 | /fonts/ 路径 | 体积 | 授权 |
+|---|---|---|---|---|
+| 楷书 | `Lanxi-WenKai` | Lanxi-WenKai.woff2 | 883KB | OFL（霞鹜文楷 GB-Lite） |
+| 楷书·细 | `Lanxi-WenKaiLight` | Lanxi-WenKaiLight.woff2 | 921KB | OFL（霞鹜文楷 GB-Lite） |
+| 手写楷 | `Lanxi-MaShanZheng` | Lanxi-MaShanZheng.woff2 | 1.7MB | OFL（马善政楷书） |
+| 黑体 | `Lanxi-HeiTi` | Lanxi-HeiTi.woff2 | 1.3MB | OFL（思源黑体） |
+| 黑体·细 | `Lanxi-HeiTiLight` | Lanxi-HeiTiLight.woff2 | 1.3MB | OFL（思源黑体） |
+| 黑体·粗 | `Lanxi-HeiTiBold` | Lanxi-HeiTiBold.woff2 | 1.4MB | OFL（思源黑体） |
+| 英文花体 | `Lanxi-GreatVibes` | Lanxi-GreatVibes.woff2 | 44KB | OFL（Great Vibes） |
 
-### 0.1 外置全量（可选配置字体根目录后可用 · 参考清单）
+### 0.1 外置全量（可选配置字体根目录后可用 · 参考清单 · 用户自备）
+
+> ⚠️ 外置大库为用户**自备**字体（非随包分发），下列清单仅供参考；其中可能含商业字库，授权由用户自行确认。内置精选（0.0）已全部开源。
 
 | 风格 | 字体（font-family 名） | 相对路径（/fonts/ 之后） | 适合 |
 |---|---|---|---|
@@ -61,23 +58,24 @@
 
 | 场景/话题 | 标题字体 | 点缀 | 正文 |
 |---|---|---|---|
-| 古风/诗词/汉服 | 瘦金书 / 隶书 / 汉简 | 行草 | 系统无衬线 |
-| 文学/书信/情感 | 尚雅 / 浪倩 / 舒体 | 喵喵 | 品宋或系统无衬线 |
-| 科技/数据/代码 | 点黑 / 超粗黑 | 静黑超细 | 系统无衬线 + 等宽 |
-| 艺术/展览/音乐会 | 黄金时代 / 海报体 | 菱心体 | 系统无衬线 |
-| 萌系/日常/娱乐 | 喵喵 / 叮叮 / 卡通 | 卡通 | 系统无衬线 |
-| 庆典/节日/喜事 | 瘦金书 / 超粗黑 | 黄金时代 | 系统无衬线 |
+| 古风/诗词/汉服 | WenKai / MaShanZheng | WenKaiLight | 系统无衬线 |
+| 文学/书信/情感 | WenKaiLight / MaShanZheng | WenKai | 系统无衬线 |
+| 科技/数据/代码 | HeiTiBold | HeiTiLight | 系统无衬线 + 等宽 |
+| 极简/禅意/优雅 | HeiTiLight / WenKaiLight | WenKai | 系统无衬线 |
+| 庆典/标题/强调 | HeiTiBold | GreatVibes | 系统无衬线 |
+| 英文标题/情书 | GreatVibes | WenKaiLight | 系统无衬线 |
 
 ### 0.3 @font-face 模板（直接抄）
 
 ```css
-@font-face{font-family:'Lanxi-黄金时代';src:url('/fonts/造字工房最全字体-2016-01-06更新/艺术字体/MFTheGoldenEra_Noncommercial-Bold.ttf');}
-#vcp-root .title{font-family:'Lanxi-黄金时代','Lanxi-瘦金书',serif;}
+@font-face{font-family:'Lanxi-WenKai';src:url('/fonts/Lanxi-WenKai.woff2');}
+#vcp-root .title{font-family:'Lanxi-WenKai','Lanxi-HeiTi',serif;}
 ```
 
 ### 0.4 注意
-- 单帖最多 1-2 款艺术字体（字体 5-20MB，浏览器缓存但首载慢）；正文永远系统无衬线。
-- 英文花体已收录 `Lanxi-GreatVibes`（Great-Vibes/GreatVibes-Regular-2.otf，52KB 轻量）；更多西文花体可继续放入 I:\字体。
+- 单帖最多 1-2 款艺术字体（woff2 子集 0.9-1.7MB，浏览器缓存但首载仍建议克制）；正文永远系统无衬线。
+- 英文花体已收录 `Lanxi-GreatVibes`（Great Vibes，44KB 轻量）；更多西文花体可继续放入外置字体库。
+- 内置字体源存于 `tools/font-src/`（开源 TTF/OTF），改动后重跑 `tools/subset_fonts.py` 再生 woff2。
 - 中文字体通常自带西文字符，但艺术体的西文可能不够「花体」，英文标题优先用 Lanxi-GreatVibes 或系统衬线。
 - **皮肤覆盖对抗（重要）**：GUI 的 maid-atelier 皮肤「字体设置」会注入带 `!important` 的全局字体覆盖（选择器 `[data-pane="conversation"] [data-chat-anchor-key] :where(...)`，特异性 (0,2,0)），把消息区文本字体强制换成用户设置的字体。对策：使用自定义字体时，`font-family` 声明**必须加 `!important`** 且选择器以 `#vcp-root` 前缀（特异性 (1,1,0) 压过皮肤）；或给目标元素加 `data-skin-chrome` 属性直接绕开覆盖。字号同理（皮肤可能也覆盖 font-size）。
 
@@ -105,6 +103,8 @@
 - 深海琉璃（深色）：bg `linear-gradient(165deg,#051322,#0a2540 42%,#0e3a5c 72%,#06283f)`；文字 `#e8f2fb`；accent `#7fd4ff`/`#40dcff`；描边 `rgba(170,225,255,.16)`。
 - 暖纸书房（浅色）：bg `#faf6ef` + 微纹理；文字 `#2b2b28`；accent `#8a6d3b`；卡片 `#fffdf8` 细描边 `#e4dccb`。
 - 终端绿幕（极客）：bg `#0d1117`；文字 `#c9d1d9`；accent 绿 `#3fb950` + 等宽字体。
+- 胶片黄昏（暖色怀旧）：bg `linear-gradient(165deg,#1a0f0a,#3a1f14 55%,#5c2e1c)`；文字 `#f4e9d8`；accent `#e0a458`；描边 `rgba(224,164,88,.18)`。
+- 青瓷素雅（浅色冷调）：bg `linear-gradient(165deg,#eef4f1,#e3ede8 60%,#d7e4dd)`；文字 `#2a3a33`；accent `#4e8a6e`；卡片 `#f7faf8` 细描边 `#c8d8cf`。
 
 ---
 
@@ -155,6 +155,8 @@
 
 ## 4. 自检清单（每帖渲染前过一遍）
 
+0. **叙事帖先查正文排版**：每个自然段落首行是否 `text-indent: 2em`（缩进 2 汉字）？
+   段落间是否**不用空行**、靠缩进区分？正文有没有被顶格、挤成一片？（小说/故事装帧必查，先生亲自骂过）引文/强调框不算自然段，不缩进。
 1. 文字与背景对比 ≥ 4.5:1？（拿不准就用极浅 on 极深，或极深 on 极浅）
 2. 一眼能否分清「标题 / 正文 / 操作」三级？
 3. 删掉任何装饰（光晕/纹理/SVG），正文语义依然完整成立？
@@ -162,6 +164,7 @@
 5. 代码块是否用 `<pre>` + 等宽 + 独立底色？
 6. 交互是否只用白名单原语？（`<details>` 折叠 / radio·checkbox hack 选项卡 / CSS 动画轮播 / `onclick="input('...')"` 按钮；一律零 JS、无自定义事件）
 7. 有没有 `<script>`、外链脚本、onclick 之外的事件？（一律禁止）
+8. 交互元素是否有键盘焦点态？（radio/checkbox hack 的 label 加 `:focus-visible` 焦点环，Tab 遍历可见）
 
 ---
 
@@ -176,12 +179,13 @@
 | 行高 1.2 的正文（挤） | 正文行高 1.6-1.8 |
 | 标题正文同样大小 | 建立字号阶梯（24/15/12） |
 | 装饰挤压内容 | 先内容后装饰，装饰密度随严肃度递减 |
-| 小标题字号被全局字体设置压制（font-size 级联失效，内联 !important 也无效——皮肤/主题会强制统一消息区字号） | ① 关键属性（text-indent/font-size/letter-spacing）一律**内联 style**（走 React 原生 style 对象，必达）；② 字号仍被压制时用 `transform:scale(1.3~1.5)` + `transform-origin:left center` 视觉放大兜底（物理必达，不参与字体级联）；③ 书法细笔画体（瘦金书等）配 `text-shadow` 描边光晕增重 |
+| 小标题字号被全局字体设置压制（font-size 级联失效，内联 !important 也无效——皮肤/主题会强制统一消息区字号） | ① 关键属性（text-indent/font-size/letter-spacing）一律**内联 style**（走 React 原生 style 对象，必达）；② 字号仍被压制时用 `transform:scale(1.3~1.5)` + `transform-origin:left center` 视觉放大兜底（物理必达，不参与字体级联）；③ 书法细笔画体（WenKai 等）配 `text-shadow` 描边光晕增重 |
 | 排版关键属性写在 `<style>` 规则里不可靠（部分规则在渲染链中损耗） | `<style>` 只放 @font-face 与 @keyframes；所有关键排版属性内联 |
 | 内联 code 只设背景色忘了文字色（白底白字/黑底黑字灾难） | **code 必须成对设置背景+文字色**：深色容器用「更深底 #0a1626 + 亮青字 #bfe9ff」；浅色容器用「浅灰底 #f0f0ea + 深红 #b03a2e / 深蓝 #1f5fa8」；与正文颜色明显区分，禁止只给一面 |
 | 深色容器里出现「白块」或「亮块」背景元素 | 容器内所有自带背景的元素（code/徽章/按钮）背景色必须与容器同明度域（深色容器用深色底），否则亮块抢戏且与浅字撞色 |
 | 子卡片用 backdrop-filter 导致大容器高度塌陷（背景只包顶部一条横框，长内容/多子框时触发） | **弃用 backdrop-filter**：子卡片/子背景一律用实色多层渐变（rgba 叠加 + 细描边 + 内高光）模拟玻璃感；#vcp-root 显式 `display:block;width:100%;box-sizing:border-box;overflow:hidden`，背景完整包裹所有子内容 |
 | vcp-root 内部出现空行（\n\n）→ 背景只包顶部一条、下方内容全部溢出容器（markdown 的 HTML 块遇到空行即结束，把卡片拆成多个独立节点，实测 2026-08-19 确认） | **vcp-root 内部禁止空行（铁律）**：所有子元素用单个换行或单行排列；需要视觉分组时用 margin 而不是空行；写完检查 `value.includes('\\n\\n')` 必须为 false |
+| 小说/故事装帧时正文段落顶格、没缩进、被挤成一片（先生骂过：该空两个中文字却顶格） | **叙事帖每个自然段落首行 `text-indent: 2em`**（内联 style）；段落间不用空行、用 margin；引文/强调框不算自然段不缩进；封面可有可无，正文排版必须规范 |
 
 ---
 

@@ -80,7 +80,7 @@ const CASE_V6 = String.raw`case"html":return function(){if(typeof localStorage!=
 const SCRIPT_FILTER = String.raw`if(i.localName==="script"||i.localName==="iframe"||i.localName==="object"||i.localName==="embed")return null;`
 
 // v6 最终形态（含 onclick 桥 + style 过滤词边界 + href/src 白名单 + ref 锁定）
-const VC_V6 = String.raw`for(const c of i.attributes){if(c.name==="onclick"){const m=/^input\s*\(\s*['"]([\s\S]*?)['"]\s*\)\s*;?\s*$/.exec(c.value);if(m)s.onClick=function(){const fn=window.__dshInput;fn&&fn(m[1])};continue}if(c.name==="style"){let sv=c.value;sv=sv.replace(/position\s*:\s*fixed\s*;?/gi,"").replace(/z-index\s*:\s*\d{4,}\s*;?/gi,"").replace(/(?<![\w-])content\s*:[^;]*;?/gi,"");s.style=hp(sv);s.ref=function(el){if(el)for(const d of sv.split(";")){const j=d.indexOf(":");if(j===-1)continue;const p=d.slice(0,j).trim(),v=d.slice(j+1).trim();if(v&&/^(color|font-family|font-size|font-weight|font-style|line-height|letter-spacing|text-align|text-shadow)$/.test(p))el.style.setProperty(p,v,"important")}};continue}if(c.name==="class"){s.className=c.value;continue}if(c.name==="href"&&!/^(https?:|mailto:|\/|#)/i.test(c.value))continue;if(c.name==="src"&&!/^(https?:|data:image\/|\/|#)/i.test(c.value))continue;s[c.name]=c.value}`
+const VC_V6 = String.raw`for(const c of i.attributes){if(c.name==="onclick"){const m=/^input\s*\(\s*['"]([\s\S]*?)['"]\s*\)\s*;?\s*$/.exec(c.value);if(m)s.onClick=function(){const fn=window.__dshInput;fn&&fn(m[1])};continue}if(/^on/i.test(c.name))continue;if(c.name==="style"){let sv=c.value;sv=sv.replace(/position\s*:\s*fixed\s*;?/gi,"").replace(/z-index\s*:\s*\d{4,}\s*;?/gi,"").replace(/(?<![\w-])content\s*:[^;]*;?/gi,"");s.style=hp(sv);s.ref=function(el){if(el)for(const d of sv.split(";")){const j=d.indexOf(":");if(j===-1)continue;const p=d.slice(0,j).trim(),v=d.slice(j+1).trim();if(v&&/^(color|font-family|font-size|font-weight|font-style|line-height|letter-spacing|text-align|text-shadow)$/.test(p))el.style.setProperty(p,v,"important")}};continue}if(c.name==="class"){s.className=c.value;continue}if(c.name==="href"&&!/^(https?:|mailto:|\/|#)/i.test(c.value))continue;if(c.name==="src"&&!/^(https?:|data:image\/|\/|#)/i.test(c.value))continue;s[c.name]=c.value}`
 
 // 注入 v6 稳定区模块的锚点
 const VC_DEF_BEFORE = String.raw`}function vc(n,r){`
@@ -210,6 +210,7 @@ function main() {
     [V6_MARK, 'v6 标记 window.__vcpStable'],
     ['window.__dshInput', 'onclick 交互桥 __dshInput'],
     [String.raw`(?<![\w-])content`, 'content 词边界正则'],
+    ['if(/^on/i.test(c.name))continue;', 'on* 属性安全过滤'],
     ['setProperty(p,v,"important")', '文字属性 !important 锁定'],
   ]
   for (const [mark, label] of features) {

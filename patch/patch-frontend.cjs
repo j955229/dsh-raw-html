@@ -1,0 +1,207 @@
+#!/usr/bin/env node
+/**
+ * dsh-raw-html —— 前端渲染补丁脚本（VCP 视觉通感协议支持）v6
+ *
+ * 修改 @deepseek-ai/dsh-web-frontend 的 dist bundle（index-*.js）：
+ *
+ *   A. pu() 的 case"html" 分支（v6 稳定区固化版）：
+ *      localStorage['dsh.rawHtml'] === '1' 时，调 window.__vcpStable.render()
+ *      把 HTML 流式内容转成 React 元素；否则维持原行为（HTML 显示为转义源码）。
+ *      - 【表情包修复】Markdown 图片语法 ![alt](url) 先转 <img>（URL 白名单
+ *        http/https、data:image/*、相对路径，其余协议不生成 img）
+ *      - 【流式渲染 + 稳定区固化 v6】已渲染块固化 + 只重渲染尾巴：
+ *        轻量 HTML 扫描器把流式内容切成「已闭合块 + 尾巴」；已闭合块解析一次
+ *        并缓存（元素引用跨帧不变 → React 跳过 diff → DOM 不重建 → 动画真循环、
+ *        超长卡片不掉帧）；vcp-root 未闭合期间内部闭合子块照样固化，容器开标签
+ *        单独解析并包裹组装；每帧只解析新增段；前缀失配（回退/多消息切换）与
+ *        容器闭合帧走全量兜底。
+ *      - 【动画防闪】tail 流式中剥一次性动画（保留 infinite），固化块保留全部
+ *        动画（一次性动画在块稳定时播放一次，不闪烁）；最终帧（非流式）tail
+ *        动画全保留。缓存键区分流式/非流式，避免动画状态串用。
+ *
+ *   B. vc() 属性循环增强 v2（DOM → React 元素转换器）：
+ *      - onclick="input('...')" 属性 → React onClick 处理器（桥接 window.__dshInput）
+ *      - 过滤 script / iframe / object / embed 标签
+ *      - style 危险属性过滤（position:fixed / z-index>=1000 / content:）
+ *      - URL 协议白名单（href: http/https/mailto/相对路径/锚点；src: 同 + data:image）
+ *
+ *   C. vc() 定义前注入 v6 稳定区模块（patch/v6-inject.js）：
+ *      扫描器 + 状态机 + 组装逻辑，挂载到 window.__vcpStable。
+ *
+ *   健康检查：补丁写入后自动运行 `node --check` 校验 bundle 语法；
+ *   校验失败自动回滚到本次备份并中止。
+ *
+ * 开关状态由 dsh-raw-html 插件的「</>」按钮写入 localStorage。
+ *
+ * 用法：
+ *   node patch-frontend.cjs [bundle路径]
+ * 备份：
+ *   同目录生成 index-*.js.bak-<时间戳>；恢复时把 .bak 改回原名即可。
+ */
+'use strict'
+
+const fs = require('node:fs')
+const path = require('node:path')
+const { execFileSync } = require('node:child_process')
+
+/**
+ * 自动探测 dsh-web-frontend 的 dist bundle：
+ * 依次检查参数指定 → 环境变量 → 常见安装位置（npm 全局 / 用户 .dsh profile）。
+ * 找不到时返回 null（由调用方提示手动指定）。
+ */
+function findBundle() {
+  // 0) 命令行参数优先
+  const arg = process.argv[2]
+  if (arg) return fs.existsSync(arg) ? arg : null
+
+  // 1) 环境变量
+  if (process.env.DSH_WEB_FRONTEND_DIST) {
+    const p = process.env.DSH_WEB_FRONTEND_DIST
+    if (fs.existsSync(p)) return p
+  }
+
+  // 2) 常见安装位置
+  const candidates = []
+  const addDir = (d) => {
+    if (!d || !fs.existsSync(d)) return
+    try {
+      const assets = path.join(d, 'dist', 'assets')
+      if (!fs.existsSync(assets)) return
+      for (const f of fs.readdirSync(assets)) {
+        if (/^index-[\w-]+\.js$/.test(f)) candidates.push(path.join(assets, f))
+      }
+    } catch {
+      // 目录不可读则跳过。
+    }
+  }
+  addDir(path.join(process.env.APPDATA || '', 'npm', 'node_modules', '@deepseek-ai', 'dsh', 'node_modules', '@deepseek-ai', 'dsh-web-frontend'))
+  addDir(path.join(process.env.APPDATA || '', 'npm', 'node_modules', '@deepseek-ai', 'dsh-web-frontend'))
+  addDir(path.join(process.env.USERPROFILE || '', '.dsh', 'profiles', 'web', 'node_modules', '@deepseek-ai', 'dsh-web-frontend'))
+  addDir(path.join(process.env.USERPROFILE || '', '.dsh', 'profiles', 'node_modules', '@deepseek-ai', 'dsh-web-frontend'))
+  return candidates[0] || null
+}
+
+const file = findBundle()
+
+if (!file) {
+  console.error('[patch] 未自动找到 dsh-web-frontend 的 dist bundle。')
+  console.error('[patch] 用法: node patch-frontend.cjs <bundle路径>')
+  console.error('[patch] 例如: node patch-frontend.cjs "C:\\...\\dsh-web-frontend\\dist\\assets\\index-xxx.js"')
+  process.exit(1)
+}
+
+let t = fs.readFileSync(file, 'utf8')
+
+// ---- 锚点 A：case"html" 分支（当前 bundle v4 状态）------------------------
+const CASE_HTML_BEFORE = String.raw`case"html":return function(){if(typeof localStorage!=="undefined"&&localStorage.getItem("dsh.rawHtml")==="1"){try{const v=(n.value||"").replace(/!\[([^\]]*)\]\(([^)]+)\)/g,function(m,a,u){u=u.trim();if(!/^(https?:|data:image\/|\/)/i.test(u))return m;return"<img alt=\""+((a||"").replace(/"/g,"&quot;"))+"\" src=\""+u.replace(/"/g,"&quot;")+"\">"}),w=i.streaming?v.replace(/animation:([^;"']*);?/g,function(m,x){return/infinite/.test(x)?m:""}):v,F=window.__vcpFast||(window.__vcpFast={c:new Map(),last:"",el:null,hits:0,builds:0,ms:0,lastLog:0}),t0=typeof performance!=="undefined"&&performance.now?performance.now():0;if(F.c.has(w)){F.hits++;if(t0&&performance.now()-F.lastLog>2000){F.lastLog=performance.now();console.debug("[vcp-fast] HIT size="+F.c.size+" hits="+F.hits+" builds="+F.builds)}return F.c.get(w)}let R=null;if(F.last!==""&&F.el!==null&&w.startsWith(F.last)&&(/<\/[a-zA-Z][^>]*>\s*$/.test(F.last)||/<[a-zA-Z][^>]*\/>\s*$/.test(F.last))){const tb=new DOMParser().parseFromString(w.slice(F.last.length),"text/html").body,to=[];for(let k=0;k<tb.childNodes.length;k++)to.push(vc(tb.childNodes[k],k));if(to.length===0)R=F.el;else R=f.jsx(f.Fragment,{children:[F.el,to.length===1?to[0]:f.jsx(f.Fragment,{children:to})]})}else{const b=new DOMParser().parseFromString(w,"text/html").body;if(!b.childNodes.length)return null;const o=[];for(let k=0;k<b.childNodes.length;k++)o.push(vc(b.childNodes[k],k));R=o.length===1?o[0]:f.jsx(f.Fragment,{children:o})}F.c.set(w,R);if(F.c.size>200)F.c.clear();F.last=w;F.el=R;F.builds++;if(t0){F.ms+=performance.now()-t0;if(performance.now()-F.lastLog>2000){F.lastLog=performance.now();console.debug("[vcp-fast] BUILD size="+F.c.size+" avg="+(F.ms/F.builds).toFixed(2)+"ms last="+w.length)}}return R}catch(e){}}return n.value}();`
+
+// v5：图片 URL 白名单（http/https/data:image/相对路径），其余协议不生成 img
+const CASE_HTML_AFTER = String.raw`case"html":return function(){if(typeof localStorage!=="undefined"&&localStorage.getItem("dsh.rawHtml")==="1"){try{const v=(n.value||"").replace(/!\[([^\]]*)\]\(([^)]+)\)/g,function(m,a,u){u=u.trim();if(!/^(https?:|data:image\/|\/)/i.test(u))return m;return"<img alt=\""+((a||"").replace(/"/g,"&quot;"))+"\" src=\""+u.replace(/"/g,"&quot;")+"\">"}),w=i.streaming?v.replace(/animation:([^;"']*);?/g,function(m,x){return/infinite/.test(x)?m:""}):v,F=window.__vcpFast||(window.__vcpFast={c:new Map(),last:"",el:null,hits:0,builds:0,ms:0,lastLog:0}),t0=typeof performance!=="undefined"&&performance.now?performance.now():0;if(F.c.has(w)){F.hits++;if(t0&&performance.now()-F.lastLog>2000){F.lastLog=performance.now();console.debug("[vcp-fast] HIT size="+F.c.size+" hits="+F.hits+" builds="+F.builds)}return F.c.get(w)}let R=null;if(F.last!==""&&F.el!==null&&w.startsWith(F.last)&&(/<\/[a-zA-Z][^>]*>\s*$/.test(F.last)||/<[a-zA-Z][^>]*\/>\s*$/.test(F.last))){const tb=new DOMParser().parseFromString(w.slice(F.last.length),"text/html").body,to=[];for(let k=0;k<tb.childNodes.length;k++)to.push(vc(tb.childNodes[k],k));if(to.length===0)R=F.el;else R=f.jsx(f.Fragment,{children:[F.el,to.length===1?to[0]:f.jsx(f.Fragment,{children:to})]})}else{const b=new DOMParser().parseFromString(w,"text/html").body;if(!b.childNodes.length)return null;const o=[];for(let k=0;k<b.childNodes.length;k++)o.push(vc(b.childNodes[k],k));R=o.length===1?o[0]:f.jsx(f.Fragment,{children:o})}F.c.set(w,R);if(F.c.size>200)F.c.clear();F.last=w;F.el=R;F.builds++;if(t0){F.ms+=performance.now()-t0;if(performance.now()-F.lastLog>2000){F.lastLog=performance.now();console.debug("[vcp-fast] BUILD size="+F.c.size+" avg="+(F.ms/F.builds).toFixed(2)+"ms last="+w.length)}}return R}catch(e){}}return n.value`
+
+// v6：稳定区固化 —— case"html" 改为调 window.__vcpStable.render（模块由锚点 C 注入）
+// 注意：BEFORE 是含尾部 `}();` 的完整分支文本，AFTER 必须同样以 `}();` 结尾（IIFE 调用收尾）
+const CASE_HTML_V6_AFTER = String.raw`case"html":return function(){if(typeof localStorage!=="undefined"&&localStorage.getItem("dsh.rawHtml")==="1"){try{var vr=window.__vcpStable&&window.__vcpStable.render(n.value,i.streaming);if(vr!==null&&vr!==undefined)return vr}catch(e){}}return n.value}();`
+
+// ---- 锚点 B：vc() 属性循环（当前 bundle 增强 v2 状态）-----------------------
+const VC_LOOP_BEFORE = String.raw`for(const c of i.attributes){if(c.name==="onclick"){const m=/^input\s*\(\s*['"]([\s\S]*?)['"]\s*\)\s*;?\s*$/.exec(c.value);if(m)s.onClick=function(){const fn=window.__dshInput;fn&&fn(m[1])};continue}if(c.name==="style"){let sv=c.value;sv=sv.replace(/position\s*:\s*fixed\s*;?/gi,"").replace(/z-index\s*:\s*\d{4,}\s*;?/gi,"").replace(/content\s*:\s*[^;"']*;?/gi,"");s.style=hp(sv);continue}if(c.name==="class"){s.className=c.value;continue}if(c.name==="href"&&!/^(https?:|mailto:|\/|#)/i.test(c.value))continue;if(c.name==="src"&&!/^(https?:|data:image\/|\/|#)/i.test(c.value))continue;s[c.name]=c.value}`
+
+// v2.1：修复 content 过滤——旧正则 [^;"']* 匹配不了引号包裹的值（content:"文字"），
+// 导致伪元素文字注入漏网；改为 [^;]* 到分号为止全剥
+const VC_LOOP_AFTER = String.raw`for(const c of i.attributes){if(c.name==="onclick"){const m=/^input\s*\(\s*['"]([\s\S]*?)['"]\s*\)\s*;?\s*$/.exec(c.value);if(m)s.onClick=function(){const fn=window.__dshInput;fn&&fn(m[1])};continue}if(c.name==="style"){let sv=c.value;sv=sv.replace(/position\s*:\s*fixed\s*;?/gi,"").replace(/z-index\s*:\s*\d{4,}\s*;?/gi,"").replace(/content\s*:[^;]*;?/gi,"");s.style=hp(sv);continue}if(c.name==="class"){s.className=c.value;continue}if(c.name==="href"&&!/^(https?:|mailto:|\/|#)/i.test(c.value))continue;if(c.name==="src"&&!/^(https?:|data:image\/|\/|#)/i.test(c.value))continue;s[c.name]=c.value}`
+
+// ---- 锚点 B：vc 属性循环 content 正则加词边界（v6.5 修复）------------------
+// 旧正则 /content\s*:[^;]*;?/ 会误伤 justify-content（content 是 justify-content 的子串），
+// 把「justify-content: center」剥成「justify-」，并与后随的 animation 粘连成
+// 「justify-animation」，导致 animation 属性丢失、动画失效。加后行断言 (?<![\w-])
+// 让 content 前面不能是单词字符或连字符，仅匹配独立的 content: 属性。
+const CONTENT_RE_BEFORE = String.raw`replace(/content\s*:[^;]*;?/gi,"")`
+const CONTENT_RE_AFTER = String.raw`replace(/(?<![\w-])content\s*:[^;]*;?/gi,"")`
+
+// ---- 锚点 D：style 分支加 ref 回调锁定文字属性（v6.11 优先级锁定）-----------
+// 需求：VCP 卡片内联 style 的文字颜色/字体/字号必须最高优先级，不被其他
+// 字体/主题插件的全局 !important 规则覆盖。React 内联 style 不支持 !important
+// （style 值带 "!important" 后缀会被 setProperty 吞掉），唯一可靠方式是在 ref
+// 回调里对文字相关属性 el.style.setProperty(prop, val, "important")。
+// 锁定属性：color/font-family/font-size/font-weight/font-style/line-height/
+// letter-spacing/text-align/text-shadow（不含布局与 animation，避免影响流式动画）。
+const STYLE_REF_BEFORE = String.raw`s.style=hp(sv);continue}`
+const STYLE_REF_AFTER = String.raw`s.style=hp(sv);s.ref=function(el){if(el)for(const d of sv.split(";")){const j=d.indexOf(":");if(j===-1)continue;const p=d.slice(0,j).trim(),v=d.slice(j+1).trim();if(v&&/^(color|font-family|font-size|font-weight|font-style|line-height|letter-spacing|text-align|text-shadow)$/.test(p))el.style.setProperty(p,v,"important")}};continue}`
+
+// ---- 锚点 C：vc() 定义前注入 v6 稳定区模块 ----
+// 模块源码来自同目录 v6-inject.js（无 import/export，依赖闭包 vc/hp/f 与全局 window/DOMParser）。
+// BEFORE 用「hp 函数结束 + vc 函数开始」的拼接锚点，保证唯一且幂等（注入后不再命中）。
+const VC_DEF_BEFORE = String.raw`}function vc(n,r){`
+let VC_INJECT = ''
+try {
+  VC_INJECT = fs.readFileSync(path.join(__dirname, 'v6-inject.js'), 'utf8')
+} catch (e) {
+  console.error('[patch] 读取 patch/v6-inject.js 失败：', e.message)
+  process.exit(1)
+}
+const VC_DEF_AFTER = '}' + VC_INJECT + ';function vc(n,r){'
+
+/**
+ * 替换表：label / from（必须唯一命中）/ to。
+ * v6 补丁 = 锚点 C（注入稳定区模块）+ 锚点 A（case"html" 改调 render）。
+ * 注：vc 属性循环（content 过滤 v2.1）已在 v5.1 应用，无需重复。
+ */
+const REPLACEMENTS = [
+  {
+    label: 'C.注入 v6 稳定区模块（vc 定义前）',
+    from: VC_DEF_BEFORE,
+    to: VC_DEF_AFTER,
+  },
+  {
+    label: 'B.vc content 正则加词边界（防误伤 justify-content）',
+    from: CONTENT_RE_BEFORE,
+    to: CONTENT_RE_AFTER,
+  },
+  {
+    label: 'D.vc style 分支加 ref 锁定文字属性优先级',
+    from: STYLE_REF_BEFORE,
+    to: STYLE_REF_AFTER,
+  },
+  {
+    label: 'A.case"html" 分支（v5.1 → v6 稳定区固化）',
+    from: CASE_HTML_BEFORE,
+    to: CASE_HTML_V6_AFTER,
+  },
+]
+
+let changed = 0
+for (const r of REPLACEMENTS) {
+  const count = t.split(r.from).length - 1
+  if (count !== 1) {
+    console.error(`[patch] 锚点 "${r.label}" 命中 ${count} 次（需要恰好 1 次），中止，未写入任何修改`)
+    process.exit(1)
+  }
+  t = t.split(r.from).join(r.to)
+  changed += 1
+}
+
+// 备份原文件（仅当本次确有改动且尚无备份时）
+const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+const bak = `${file}.bak-${stamp}`
+fs.copyFileSync(file, bak)
+fs.writeFileSync(file, t, 'utf8')
+
+console.log(`[patch] 完成：${changed} 处补丁已写入`)
+console.log(`[patch] 文件: ${file}`)
+console.log(`[patch] 备份: ${bak}`)
+
+// 健康检查：node --check 校验 bundle 语法；失败自动回滚
+try {
+  execFileSync(process.execPath, ['--check', file], { stdio: 'pipe' })
+  console.log('[patch] 健康检查通过：node --check OK')
+} catch (e) {
+  if (fs.existsSync(bak)) {
+    fs.copyFileSync(bak, file)
+    console.error('[patch] 健康检查失败，已回滚到本次备份，未留下损坏产物！')
+    console.error('[patch] 失败详情:', String(e.stderr || e.message).split('\n')[0])
+  } else {
+    console.error('[patch] 健康检查失败且无备份可回滚，请手工修复！')
+  }
+  process.exit(1)
+}
+
+console.log('[patch] 刷新浏览器即可生效（浏览器缓存较旧时请强刷 Ctrl+F5）')

@@ -1,124 +1,116 @@
-# dsh-raw-html · VCP 视觉通感协议插件（发布版 v0.3.0）
+# dsh-raw-html · VCP 视觉通感协议规范插件
 
-> 让 DeepSeek Harness 的对话界面活起来：模型输出的 HTML 从「一坨源码」变成
-> **真实渲染的视觉界面**——卡片 / 图表 / 公式 / 交互按钮，随流式边写边亮。
->
-> 本发布版为「整理后的一键安装包」：任何电脑装上即用，无需联网、无需额外依赖。
+在 DeepSeek Harness Web GUI 中实现 **VCP（Visual-Synesthesia，视觉通感）协议**：
+消息里的 HTML 从「一坨源码」变成真正渲染的界面，并让 agent 按一套**可维护的设计规范**输出。
 
-## ✨ 它能做什么
+**即插即用**：任何电脑、任何 agent —— 安装本插件 + 打开浏览器「</>」开关 →
+浏览器开始渲染 HTML，agent 开始按规范输出（设计原则 / 中文排版 / 字体搭配）。
 
-| 能力 | 说明 |
-|---|---|
-| 🎨 视觉卡片 | 模型按 VCP 协议输出 `#vcp-root` 容器 → 真实界面（渐变/圆角/动画） |
-| 🖋 书法字体 | 内置 12 款精选字体（瘦金书/隶书/行草/品宋/喵喵/黄金时代…），零配置 |
-| 🧮 数学公式 | KaTeX 本地渲染：行内 `\(...\)`、块级 `$$...$$`，离线可用 |
-| 📊 Mermaid 图表 | 流程图/时序图/甘特图/状态图，白底淡彩 + 缩放拖拽工具栏 |
-| 🖼 故事装帧 | 故事/散文/书信可配 SVG 顶栏封面，如杂志开篇 |
-| 🕹 零 JS 交互 | 折叠/选项卡/手风琴/轮播 + 一键发送按钮（onclick 桥接） |
-| ⚡ 流式加速 | vcp-fast 缓存 + 增量引擎，已渲染块不重建，动画真循环 |
-| 🔒 安全结界 | script/iframe/object/embed 过滤、URL 白名单、style 危险属性剥离 |
+## 版本
 
-## 🖼 宣传图
+- **插件版本**：`package.json` 的 `version`（当前 **0.3.0**），随 `dsh plugin` 升级。
+- **补丁代号**：`patch/` 注入模块的演进代号（当前 **v6**），由 `install-v6.cjs` 应用到前端 bundle，二者独立演进。
+- 详细变更见 [CHANGELOG.md](./CHANGELOG.md)。
 
-<img src="docs/images/banner-1.png" alt="宣传图 1" width="48%"> <img src="docs/images/banner-2.png" alt="宣传图 2" width="48%">
+## 组成
 
-<img src="docs/images/banner-3.png" alt="宣传图 3" width="48%"> <img src="docs/images/banner-4.png" alt="宣传图 4" width="48%">
+| 部件 | 位置 | 作用 |
+|---|---|---|
+| 万能安装器 | `patch/install-v6.cjs` | **推荐**：自动探测 dist bundle，任意历史状态 → v6 全量补丁（幂等 + 备份回滚 + `node --check` 健康检查）；锚点不匹配时安全中止，不破坏环境 |
+| 稳定区渲染模块 | `patch/v6-inject.js` | 注入 dist bundle 的增量渲染引擎：容器感知块级缓存、流式尾巴占位、KaTeX 公式、Mermaid 查看器；`onclick="input('...')"` 桥接为真实交互；安全过滤 script/iframe/object/embed、on* 事件与 javascript: 协议 |
+| **vcp-fast 加速引擎** | `patch/v6-inject.js` | 容器感知块级增量：已闭合块缓存（元素引用跨帧不变 → React 跳过 diff → 动画真循环），只重渲染尾巴；实测缓存命中 **1200~6800 倍**、增量 **12 倍** 提速 |
+| 插件（Host 半侧） | `lib/index.js` | 开关状态（**落盘持久化**）+ 系统提示词注入 VCP 协议与设计规范 + `/fonts` 字体服务（**内置精选 + 外置大库双源**）+ 知识层共享（协议附带本机 DESIGN.md 路径，任何 agent 可读） |
+| 插件（浏览器半侧） | `lib/client.js` | composer 发送按钮旁注入「</>」开关按钮 + 暴露 `window.__dshInput`（VCP 按钮 → 填框发送） |
+| **内置精选字体** | `assets/fonts/` | **7 款开源字体（woff2 子集，共约 7.6MB）随插件分发**——文楷/文楷细/马善政楷书/思源黑/思源细黑/思源粗黑/GreatVibes 花体，全部 OFL 授权，任何电脑装上即可用，无需任何配置 |
+| 设计系统文档 | `DESIGN.md` | 完整规范库：字体精选清单/色板/布局/中文排版/自检/常见错误（知识层，agent 可按需读取） |
+| 回归测试 | `tests/` | 六套断言（stable 47 + security 43 + bundle + smoke + math + mermaid，共 200+ 项）：帧序列 / 安全过滤 / bundle 完整性（改引擎后必跑） |
+| 性能基准 | `patch/vcp-fast-bench.cjs` | domino 真实 DOM 解析环境对比新旧路径耗时与提速倍数（自动下载依赖，零安装） |
+| 子集化工具 | `tools/subset_fonts.py` | 维护者用：把新字体裁剪为常用字子集 + woff2 压缩（需 Python + fonttools + brotli） |
 
-<img src="docs/images/banner-5.png" alt="宣传图 5" width="70%">
+## 安装（任意 DSH 环境）
 
-## 📦 安装（三步）
-
-### 前置条件
-- 已安装 DeepSeek Harness（`dsh` 命令可用，`dsh --version` 能输出版本）
-- 已安装 Node.js（`node --version` 能输出版本）
-
-### 第一步：解压
-把 `dsh-raw-html-v0.3.0.zip` 解压到任意位置，得到 `dsh-raw-html` 文件夹。
-
-### 第二步：打渲染补丁（关键一步）
-打开终端（PowerShell / CMD），执行：
+**推荐：万能安装器**（任意历史状态 → v6 全量补丁，幂等 + 备份回滚 + `node --check` 健康检查）：
 
 ```powershell
-node "解压路径\dsh-raw-html\patch\install-v6.cjs"
+# 1. 打补丁（v6 稳定区模块 + HTML 渲染 + 安全过滤，一条命令全量到位）
+node "本插件路径\patch\install-v6.cjs"
+
+# 2. 安装插件（即插即用；卸载用 dsh plugin --profile web remove dsh-raw-html）
+dsh plugin --profile web add "本插件路径"
+
+# 3. 重启 dsh 服务，然后刷新浏览器页面（缓存较旧时 Ctrl+F5）
 ```
 
-脚本会自动探测 dsh 的 web 前端文件并注入渲染能力：
-- 找不到 bundle 时，会提示手动指定路径（见「常见问题」）
-- 已打过补丁（再次安装）时，自动跳过，不会重复修改
-- 每一步都有备份 + 语法校验 + 失败回滚，**绝不写坏文件**
-
-### 第三步：注册插件 + 重启
+探测失败时手动指定 bundle 路径：
 
 ```powershell
-dsh plugin --profile web add "解压路径\dsh-raw-html"
+node "...\patch\install-v6.cjs" "C:\...\dsh-web-frontend\dist\assets\index-*.js"
 ```
 
-然后**重启 dsh 服务**，刷新浏览器页面（缓存较旧时按 Ctrl+F5）。
+> 历史脚本（v1/v2 时代）`patch/install.cjs`、`patch/patch-frontend.cjs`、`patch/upgrade-patch.cjs` 仍保留在源仓库供参考，日常安装请使用 `install-v6.cjs`。
 
-### 第四步：开启渲染开关
-打开任意对话，输入框发送按钮旁会出现 **「</>」开关**，点击变成 **ON**。
-之后新消息里的 HTML 就会渲染为真实界面（历史消息刷新后按新状态重渲染）。
+## vcp-fast 加速引擎（v0.3.0）
 
-> 💡 开关状态会持久化，重启服务后自动恢复。
+在 v1 渲染补丁基础上新增的「缓存 + 增量」双引擎（`window.__vcpFast`）：
 
-## ✅ 验证
+- **精确缓存**：HTML 字符串未变时，直接返回缓存的 React 元素引用——React 对引用相同的元素跳过整个子树 reconciliation。历史消息滚动 / 切会话 / React 重渲染 → 零重建。
+- **增量追加**：内容 = 旧内容 + 追加段，且旧内容以闭合标签结尾时，稳定部分引用不变，只解析渲染新增段。
+- **安全边界**：仅非流式 + 开关开启时生效；旧值未闭合或内容重写时自动回退全量；缓存上限 200 条自动清理；onclick 桥接与 script/iframe 过滤能力不变。
+- **验证**：DevTools console 可见 `[vcp-fast] HIT/BUILD` 日志（每 2 秒节流）；基准数字见 `patch/vcp-fast-bench.cjs`（真实 DOM 解析环境实测：缓存命中约 1200~6800 倍、增量约 12 倍提速）。
 
-1. 在浏览器按 F12 打开 DevTools → Console
-2. 滚动查看任意 VCP 卡片消息，可见 `[vcp-stable]` 日志
-3. 让 agent 输出一个带 `#vcp-root` 的回复 → 看到彩色卡片即成功
+## ⚠️ 常见坑：vcp-root 内部禁止空行（重要！）
 
-## 🔧 配置（可选）
+**markdown 的 HTML 块遇到空行（`\n\n`）就结束**——如果 `<div id="vcp-root">` 内部出现连续两个换行，
+卡片会被解析成多个独立节点：开头部分被 DOMParser 自动补全成「只有顶部一条背景」的小卡片，
+其余内容全部溢出到背景外面。症状：**深蓝背景只包顶部一条横框，下方内容没有背景**（2026-08-19 实测确认）。
 
-- **字体根目录**：`设置 → 插件 → raw-html → fontsRoot`
-  指向你自己的字体库（如 `D:\字体`），不配置则自动使用内置 12 款精选。
-- **恢复原样**：把 bundle 目录下的 `index-*.js.bak-installv6-*` 改回原名
-  （删除 `.bak-installv6-<时间戳>` 后缀），再执行
-  `dsh plugin --profile web remove dsh-raw-html`。
+**铁律**：
+- vcp-root 内所有子元素用**单个换行**或**单行**排列，任何地方不要出现 `\n\n`；
+- 需要视觉分组时用 `margin`，不要用空行；
+- 写完检查：卡片 HTML 字符串中 `\n\n` 出现次数必须为 0。
 
-## ❓ 常见问题
+## 配置
 
-**Q1：提示「未自动找到 dsh-web-frontend 的 dist bundle」**
-手动指定路径：
+- **内置精选字体**（推荐）：12 款随插件分发，装上即用，**零配置**。
+- **外置大库**（可选）：默认 `I:\字体`。其他电脑可把字体库目录配置到
+  「设置 → 插件 → raw-html → fontsRoot」（或直接修改 `lib/index.js` 里的默认值）。
+  没有外置大库也能用：内置 12 款 + 系统字体兜底。
+- **开关状态**：持久化在 `~/.dsh/dsh-raw-html-state.json`，服务重启后自动恢复。
+
+## 使用
+
+- 输入框（composer）发送按钮旁点 **「</> OFF」→「</> ON」** 开启；
+- 开启后**新消息**中的 HTML 即时渲染；历史消息刷新页面后按新状态重渲染；
+- agent 收到注入的 VCP 协议 → 自动按规范输出 `#vcp-root` 视觉容器；
+  关闭时协议撤回 → agent 自动回到普通 Markdown（降级）。
+- VCP 按钮 `onclick="input('回复内容')"` 点击后把内容填入输入框并发送。
+
+## 维护 / 升级
+
+- 每次修改后：`node --check lib/client.js && node --check lib/index.js` 验语法；
+  client 改动刷新即生效；host 改动需重启 dsh 服务。
+- `dsh` 升级会覆盖被打补丁的 dist 文件 → 重跑 `patch/install-v6.cjs` 即可
+  （幂等；锚点找不到会中止且不写坏文件；备份在 `*.bak-installv6-<时间戳>`）。
+- **依赖声明铁律**（2026-08-19 崩溃事件教训）：`import` 的每一个第三方包
+  **必须显式声明**在 package.json（dependencies 或 peerDependencies）——
+  依赖解析靠运行环境存量 node_modules 碰运气 = 把生命线交给风浪。
+  每次改动后运行 `node tools/check-deps.cjs` 核对；目录重构/移动 node_modules/
+  打包资源后，务必验证 `import('@deepseek-ai/schemastery')` 可解析。
+- 想改进设计规范 → 编辑 `DESIGN.md`（agent 会在需要时读取）+ 同步协议文本
+  （`lib/index.js` 的 `buildProtocolText`）。
+- 想扩充内置字体 → 编辑 `tools/subset_fonts.py` 的 FONTS 清单 + 跑一次
+  （需 Python + fonttools + brotli），自动输出 woff2 子集到 `assets/fonts/`。
+
+## 恢复（撤销补丁）
+
 ```powershell
-node "解压路径\dsh-raw-html\patch\install-v6.cjs" "C:\...\dsh-web-frontend\dist\assets\index-xxx.js"
+# 把补丁自动生成的备份改回原名（如 index-*.js.bak-xxx → index-*.js），再移除插件：
+dsh plugin --profile web remove dsh-raw-html
 ```
 
-**Q2：提示「既非原始态也非已补丁增强态，无法识别」**
-说明你的 dsh 版本压缩代码与补丁锚点不匹配。此时脚本**已安全中止**
-（备份保留、未写入任何修改），请把 dsh 版本号反馈给插件作者。
+## 安全提示
 
-**Q3：安装后消息里 HTML 还是源码？**
-① 确认「</>」开关已点亮；② 确认重启过 dsh 服务并强刷（Ctrl+F5）；
-③ 确认补丁确实写入（重跑 install-v6.cjs 应提示「已是 v6，跳过」）。
-
-**Q4：agent 输出的 HTML 包含危险内容怎么办？**
-渲染层已过滤 script/iframe/object/embed、javascript: 协议与危险样式；
-事件只放行 `onclick="input('...')"` 受控通道。但仍请**只对可信模型开启**开关。
-
-## 📁 目录结构
-
-```
-dsh-raw-html/
-├── patch/
-│   ├── install-v6.cjs   ← 一键安装器（本包唯一安装入口）
-│   └── v6-inject.js     ← 渲染核心模块（稳定区/KaTeX/Mermaid/安全）
-├── lib/                 ← 插件主体（开关 + 协议注入 + /fonts /vendor 服务）
-├── assets/
-│   ├── fonts/           ← 内置 12 款精选字体（随包分发）
-│   └── vendor/          ← KaTeX + Mermaid 引擎（离线可用）
-├── node_modules/        ← 依赖已内置，无需 npm install
-├── DESIGN.md            ← 设计规范库（agent 知识层）
-├── FRAMING.md           ← 故事装帧手册
-├── VCP-INTERACTIONS.md  ← 交互元素手册
-├── cordis.patch.yml     ← 插件注册配置
-└── package.json
-```
-
-## ⚠️ 安全提示
-
-开启后，模型输出中的 HTML 会被渲染为界面。补丁做了脚本/事件/危险协议过滤，
-但样式与外部图片仍然可达——请只对可信模型开启。
-
----
-
-*—— dsh-raw-html · VCP 视觉通感协议插件 ——*
+开启后，模型输出中的 HTML 会被渲染为界面。补丁做了脚本/事件/危险协议过滤
+（React 元素渲染天然不执行 script；事件只放开 `onclick="input('...')"` 受控通道；
+`script/iframe/object/embed` 与 `javascript:` 协议丢弃），但样式与外部图片仍然可达——
+请只对可信模型开启。

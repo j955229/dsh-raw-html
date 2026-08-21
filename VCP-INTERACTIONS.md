@@ -35,6 +35,7 @@
   .tab-demo .tab-input{display:none}
   .tab-demo .tab-panel{display:none;padding:12px;border-radius:0 0 10px 10px;background:#0a1626;}
   .tab-demo .tab-label{display:inline-block;padding:8px 16px;cursor:pointer;border-radius:8px 8px 0 0;background:rgba(64,180,255,.08);color:#7fa8c9;margin-right:4px;}
+  .tab-demo .tab-label:focus-visible{outline:2px solid #40dcff;outline-offset:2px;}
   .tab-demo input:checked + .tab-label{background:#40dcff;color:#06182e;font-weight:600;}
   .tab-demo input:checked + .tab-label + .tab-panel{display:block}
 </style>
@@ -59,6 +60,7 @@
   .acc-item .acc-body{display:none;padding:10px 14px;background:#0a1626;font-size:13px;}
   .acc-item input:checked + label + .acc-body{display:block}
   .acc-item label{display:block;padding:10px 14px;cursor:pointer;font-weight:600;color:#cfe6f8;background:rgba(64,180,255,.06);}
+  .acc-item label:focus-visible{outline:2px solid #40dcff;outline-offset:2px;}
   .acc-item input:checked + label{color:#40dcff}
 </style>
 <div>
@@ -144,4 +146,4 @@
 
 ---
 
-*维护：本文件与 `patch/patch-frontend.cjs`、`tests/` 配套，改动渲染能力时同步更新。*
+*维护：本文件与 `patch/v6-inject.js`、`tests/` 配套，改动渲染能力时同步更新。*

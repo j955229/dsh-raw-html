@@ -14,6 +14,15 @@
  * 测试：tests/stable.test.mjs 用 node:vm 加载本文件并 stub 依赖后驱动流式帧序列。
  */
 ;(function () {
+  // 无障碍：系统开启「减少动态效果」时，关闭卡片内所有动画/过渡（纯 CSS 降级，不动渲染逻辑）。
+  try {
+    if (typeof document !== 'undefined' && document.head && !document.getElementById('vcp-reduced-motion')) {
+      var _rm = document.createElement('style')
+      _rm.id = 'vcp-reduced-motion'
+      _rm.textContent = '@media (prefers-reduced-motion: reduce){#vcp-root,#vcp-root *{animation:none !important;transition:none !important}}'
+      document.head.appendChild(_rm)
+    }
+  } catch (e) {}
   var F = window.__vcpFast || (window.__vcpFast = {
     c: new Map(),           // 整串缓存（v → 元素）
     open: null,             // 当前未闭合容器 { raw, end, props, tag }
@@ -29,8 +38,19 @@
   var IMG_RE = /!\[([^\]]*)\]\(([^)]+)\)/g
   var ANIM_RE = /animation:([^;"']*);?/g
 
+  // ---- 具名常量（魔数收拢 · 克莉丝 3.4）----
+  var CACHE_MAX = 200                // 整串缓存上限（F.c）
+  var LOG_THROTTLE_MS = 2000         // [vcp-stable] 日志节流间隔
+  var MERMAID_CACHE_MAX = 30         // mermaid SVG 渲染缓存上限
+  var MERMAID_MAX_HEIGHT = '520px'   // mermaid 视图封顶高度
+  var MERMAID_RETRY_MS = 200         // mermaid 未生成 SVG 重试间隔
+  var KATEX_RETRY_MAX = 30           // KaTeX 未就绪轮询次数上限
+  var KATEX_RETRY_MS = 200           // KaTeX 轮询间隔
+  var MATH_DEBOUNCE_MS = 600         // 流式公式防抖停顿
+
   // ---- 工具 ----
   function imgConvert(text) {
+    if (text.indexOf('![') === -1) return text
     return text.replace(IMG_RE, function (m, a, u) {
       u = u.trim()
       if (!/^(https?:|data:image\/|\/)/i.test(u)) return m
@@ -62,6 +82,7 @@
   // 防御：移除 <style> 内容里的空行（CSS 语法不需要空行；避免残留空行引发
   // 解析层面的截断类问题）。仅对「完整闭合的 style」生效。
   function sanitizeStyle(text) {
+    if (text.indexOf('<style') === -1) return text
     return text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, function (m) {
       return m.replace(/\n\s*\n/g, '\n')
     })
@@ -293,7 +314,7 @@
       var props = {}
       for (var ci = 0; ci < el.attributes.length; ci++) {
         var c = el.attributes[ci]
-        if (c.name === 'onclick') continue
+        if (/^on/i.test(c.name)) continue
         if (c.name === 'style') {
           var sv = c.value
             .replace(/position\s*:\s*fixed\s*;?/gi, '')
@@ -359,10 +380,11 @@
     return text.replace(MERMAID_PRE_RE, function (m, attrs, inner) {
       var src = inner.replace(/<code[^>]*>([\s\S]*?)<\/code>/gi, '$1')
       src = src.replace(/<code[^>]*>/gi, '').replace(/<\/code>/gi, '')
-      return '<div class="mermaid" style="position:relative;display:block;width:100%;box-sizing:border-box;margin:14px 0;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 1px 4px rgba(15,23,42,.06);"><div class="vcp-mermaid-view" style="overflow:auto;max-height:520px;padding:16px 14px;text-align:center;">' + src + '</div></div>'
+      return '<div class="mermaid" style="position:relative;display:block;width:100%;box-sizing:border-box;margin:14px 0;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 1px 4px rgba(15,23,42,.06);"><div class="vcp-mermaid-view" style="overflow:auto;max-height:' + MERMAID_MAX_HEIGHT + ';padding:16px 14px;text-align:center;">' + src + '</div></div>'
     })
   }
   function render(raw, streaming) {
+    var t0 = typeof performance !== 'undefined' && performance.now ? performance.now() : 0
     var v = sanitizeStyle(imgConvert(raw || ''))
     if (streaming) v = mathPlaceholder(v, true)
     v = mermaidBlockConvert(v)
@@ -432,13 +454,12 @@
       attachMathRef(R, true)
       scheduleMath()
       F.c.set(key, R)
-      if (F.c.size > 200) F.c.clear()
+      if (F.c.size > CACHE_MAX) F.c.clear()
     }
     F.last = v; F.el = R; F.builds++
-    var t0 = typeof performance !== 'undefined' && performance.now ? performance.now() : 0
     if (t0) {
       F.ms += performance.now() - t0
-      if (performance.now() - F.lastLog > 2000) {
+      if (performance.now() - F.lastLog > LOG_THROTTLE_MS) {
         F.lastLog = performance.now()
         console.debug('[vcp-stable] builds=' + F.builds + ' hits=' + F.hits + ' inner=' + F.inner.length + ' outer=' + F.outer.length + ' avg=' + (F.ms / F.builds).toFixed(2) + 'ms')
       }
@@ -721,49 +742,32 @@
     state.scale = fitScale()
     apply()
     outer.appendChild(tb)
-    // 小手拖拽平移：绑定内层滚动容器（el），工具栏区域不触发
+    // 小手拖拽平移：绑定内层滚动容器（el），工具栏区域不触发。
+    // 用 pointer 事件 + setPointerCapture 挂在 el 自身（不再挂 document）——
+    // el 随 React 重建被移除时监听器一并回收，长会话不累积（修复全局监听器泄漏）。
     el.style.cursor = 'grab'
+    el.style.touchAction = 'none'
     var pan = { on: false, x0: 0, y0: 0, sl0: 0, st0: 0 }
-    el.addEventListener('mousedown', function (e) {
+    el.addEventListener('pointerdown', function (e) {
       if (e.target && e.target.closest && e.target.closest('.vcp-mermaid-toolbar')) return
-      if (e.button !== 0) return
+      if (e.pointerType === 'mouse' && e.button !== 0) return
       pan.on = true
       pan.x0 = e.clientX
       pan.y0 = e.clientY
       pan.sl0 = el.scrollLeft
       pan.st0 = el.scrollTop
       el.style.cursor = 'grabbing'
+      if (el.setPointerCapture) { try { el.setPointerCapture(e.pointerId) } catch (err) {} }
       if (e.preventDefault) e.preventDefault()
     })
-    document.addEventListener('mousemove', function (e) {
+    el.addEventListener('pointermove', function (e) {
       if (!pan.on) return
       el.scrollLeft = pan.sl0 - (e.clientX - pan.x0)
       el.scrollTop = pan.st0 - (e.clientY - pan.y0)
     })
-    document.addEventListener('mouseup', function () {
-      if (!pan.on) return
-      pan.on = false
-      el.style.cursor = 'grab'
-    })
-    // 触摸平移（移动端）
-    el.addEventListener('touchstart', function (e) {
-      if (e.target && e.target.closest && e.target.closest('.vcp-mermaid-toolbar')) return
-      var t = e.touches && e.touches[0]
-      if (!t) return
-      pan.on = true
-      pan.x0 = t.clientX
-      pan.y0 = t.clientY
-      pan.sl0 = el.scrollLeft
-      pan.st0 = el.scrollTop
-    }, { passive: true })
-    document.addEventListener('touchmove', function (e) {
-      if (!pan.on) return
-      var t = e.touches && e.touches[0]
-      if (!t) return
-      el.scrollLeft = pan.sl0 - (t.clientX - pan.x0)
-      el.scrollTop = pan.st0 - (t.clientY - pan.y0)
-    }, { passive: true })
-    document.addEventListener('touchend', function () { pan.on = false })
+    function endPan() { pan.on = false; el.style.cursor = 'grab' }
+    el.addEventListener('pointerup', endPan)
+    el.addEventListener('pointercancel', endPan)
   }
   function renderMermaidInContent(container) {
     if (!container || !container.querySelectorAll) return false
@@ -793,7 +797,7 @@
           if (!view) {
             view = document.createElement('div')
             view.className = 'vcp-mermaid-view'
-            view.style.cssText = 'overflow:auto;max-height:520px;padding:16px 14px;text-align:center;'
+            view.style.cssText = 'overflow:auto;max-height:' + MERMAID_MAX_HEIGHT + ';padding:16px 14px;text-align:center;'
             while (b.firstChild) view.appendChild(b.firstChild)
             b.appendChild(view)
           }
@@ -826,7 +830,7 @@
         div.style.position = 'relative'
         var view = document.createElement('div')
         view.className = 'vcp-mermaid-view'
-        view.style.cssText = 'overflow:auto;max-height:520px;padding:16px 14px;text-align:center;'
+        view.style.cssText = 'overflow:auto;max-height:' + MERMAID_MAX_HEIGHT + ';padding:16px 14px;text-align:center;'
         view.textContent = src
         div.appendChild(view)
         if (pre.parentNode) pre.parentNode.replaceChild(div, pre)
@@ -852,7 +856,7 @@
                 el.dataset.vcpMermaidPending = ''
                 if (el.isConnected === false) return
                 var svg = el.querySelector('svg')
-                if (!svg) { setTimeout(runMermaid, 200); return }
+                if (!svg) { setTimeout(runMermaid, MERMAID_RETRY_MS); return }
                 el.dataset.vcpMermaidDone = 'true'
                 // SVG 自适应：撑满容器宽度、按 viewBox 等比缩放、居中
                 if (svg) {
@@ -865,7 +869,7 @@
                 if (cacheSrc) {
                   var cache = window.__vcpMermaidCache || (window.__vcpMermaidCache = {})
                   var ck = Object.keys(cache)
-                  if (ck.length > 30) {
+                  if (ck.length > MERMAID_CACHE_MAX) {
                     cache = {}
                     window.__vcpMermaidCache = cache
                   }
@@ -903,8 +907,8 @@
       // KaTeX 未就绪 → 轮询重试（mermaid 就绪与否不阻塞 KaTeX 渲染）
       var tries = parseInt(container.dataset.vcpMathTries || '0', 10) + 1
       container.dataset.vcpMathTries = String(tries)
-      if (tries <= 30 && container.isConnected !== false) {
-        setTimeout(function () { processMath(container) }, 200)
+      if (tries <= KATEX_RETRY_MAX && container.isConnected !== false) {
+        setTimeout(function () { processMath(container) }, KATEX_RETRY_MS)
       }
       return
     }
@@ -929,7 +933,7 @@
       if (lastMathEl && lastMathEl.isConnected !== false && window.__vcpMath) {
         window.__vcpMath.processMath(lastMathEl)
       }
-    }, 600)
+    }, MATH_DEBOUNCE_MS)
   }
 
   // 给 React 元素树顶层元素挂「挂载后处理」ref。
