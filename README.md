@@ -1,4 +1,4 @@
-﻿# dsh-raw-html · VCP 视觉通感协议插件（发布版 v0.3.0）
+# dsh-raw-html · VCP 视觉通感协议插件（发布版 v0.3.0）
 
 > 让 DeepSeek Harness 的对话界面活起来：模型输出的 HTML 从「一坨源码」变成
 > **真实渲染的视觉界面**——卡片 / 图表 / 公式 / 交互按钮，随流式边写边亮。
@@ -17,6 +17,14 @@
 | 🕹 零 JS 交互 | 折叠/选项卡/手风琴/轮播 + 一键发送按钮（onclick 桥接） |
 | ⚡ 流式加速 | vcp-fast 缓存 + 增量引擎，已渲染块不重建，动画真循环 |
 | 🔒 安全结界 | script/iframe/object/embed 过滤、URL 白名单、style 危险属性剥离 |
+
+## 🖼 宣传图
+
+<img src="docs/images/banner-1.png" alt="宣传图 1" width="48%"> <img src="docs/images/banner-2.png" alt="宣传图 2" width="48%">
+
+<img src="docs/images/banner-3.png" alt="宣传图 3" width="48%"> <img src="docs/images/banner-4.png" alt="宣传图 4" width="48%">
+
+<img src="docs/images/banner-5.png" alt="宣传图 5" width="70%">
 
 ## 📦 安装（三步）
 
