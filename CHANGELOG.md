@@ -20,6 +20,7 @@
   - **无障碍（增强 · 2.3）**：注入 `prefers-reduced-motion` CSS 降级——系统开启「减少动态效果」时自动关闭卡片动画/过渡（纯 CSS，不动渲染逻辑，默认用户零影响）。
   - **无障碍（增强 · 2.4）**：VCP-INTERACTIONS.md 交互示例补 `:focus-visible` 焦点态；DESIGN.md 自检清单加第 8 条「键盘焦点态」。
   - **代码质量（增强 · 3.4）**：v6-inject.js 魔数收拢为具名常量（CACHE_MAX / LOG_THROTTLE_MS / MERMAID_CACHE_MAX / MERMAID_MAX_HEIGHT / MERMAID_RETRY_MS / KATEX_RETRY_MAX / KATEX_RETRY_MS / MATH_DEBOUNCE_MS）。
+  - **文档（README）**：中文 README 加「效果展示 Gallery」（展示 `docs/images/` 5 张宣传图）+「本次更新」小节；新增英文版 **README.en.md**（完整翻译，含 Gallery）；修正配置节过时的字体描述（12 款 → 7 款开源）。
 
 ## 历史补丁（v1 → v6）
 

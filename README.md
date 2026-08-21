@@ -6,6 +6,26 @@
 **即插即用**：任何电脑、任何 agent —— 安装本插件 + 打开浏览器「</>」开关 →
 浏览器开始渲染 HTML，agent 开始按规范输出（设计原则 / 中文排版 / 字体搭配）。
 
+**[English README](./README.en.md) · [更新记录](./CHANGELOG.md)**
+
+## ✨ 效果展示（Gallery）
+
+> 真实会话中的 VCP 卡片渲染效果（宣传图 5 张）：
+
+![效果图 1](docs/images/banner-1.png)
+![效果图 2](docs/images/banner-2.png)
+![效果图 3](docs/images/banner-3.png)
+![效果图 4](docs/images/banner-4.png)
+![效果图 5](docs/images/banner-5.png)
+
+## 📣 本次更新（v0.3.0 · 克莉丝审计整改）
+
+- **安全（P0）**：修复 `on*` 事件属性透传缺口（只放行 `onclick` 桥接）；性能计时器诊断修复；文档引用对齐。
+- **性能（P1）**：正则快速守卫、mermaid 监听器泄漏修复、协议文本瘦身约 74%。
+- **字体（P2）**：内置 12 款商业字库 → **7 款开源字体**（全 OFL 授权）。
+- **增强**：`prefers-reduced-motion` 无障碍、键盘焦点态、魔数收拢。
+- 完整变更见 [CHANGELOG.md](./CHANGELOG.md)。
+
 ## 版本
 
 - **插件版本**：`package.json` 的 `version`（当前 **0.3.0**），随 `dsh plugin` 升级。
@@ -71,10 +91,10 @@ node "...\patch\install-v6.cjs" "C:\...\dsh-web-frontend\dist\assets\index-*.js"
 
 ## 配置
 
-- **内置精选字体**（推荐）：12 款随插件分发，装上即用，**零配置**。
+- **内置精选字体**（推荐）：7 款开源字体随插件分发（全部 OFL 授权），装上即用，**零配置**。
 - **外置大库**（可选）：默认 `I:\字体`。其他电脑可把字体库目录配置到
   「设置 → 插件 → raw-html → fontsRoot」（或直接修改 `lib/index.js` 里的默认值）。
-  没有外置大库也能用：内置 12 款 + 系统字体兜底。
+  没有外置大库也能用：内置 7 款开源字体 + 系统字体兜底。
 - **开关状态**：持久化在 `~/.dsh/dsh-raw-html-state.json`，服务重启后自动恢复。
 
 ## 使用
