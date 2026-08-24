@@ -4,24 +4,31 @@
  *
  * 面向「全新电脑 / 其他 agent 环境」的一键安装入口。
  * 无论目标 dsh-web-frontend 的 dist bundle 处于哪个历史状态
- * （原始未打补丁 / v1·v2 加速引擎 / v4·v5 中间态），都能一步打到
- * 当前完整能力（v6）：
+ * （原始未打补丁 / v1·v2 加速引擎 / v4·v5 中间态 / rc.8+ 重构形态），
+ * 都能一步打到当前完整能力（v6）：
  *
  *   A. case"html" 分支 → 调 window.__vcpStable.render（流式稳定区固化：
  *      已闭合块缓存、只重渲染尾巴；图片 Markdown 转 <img> 与安全白名单
  *      由 v6 模块接管）
- *   B. vc() 属性循环 → v6 最终形态：onclick="input('...')" 桥接 +
+ *   B. vc()/Xu() 属性循环 → v6 最终形态：onclick="input('...')" 桥接 +
  *      style 危险属性剥离（content 词边界正则，防误伤 justify-content）+
  *      href/src URL 协议白名单 + style 文字属性 ref 回调 !important 锁定
  *      （防皮肤覆盖）；原始态额外补 script/iframe/object/embed 过滤
- *   C. vc() 定义前注入 v6 稳定区模块（patch/v6-inject.js：扫描器 + 状态机 +
+ *   C. vc()/Xu() 定义前注入 v6 稳定区模块（patch/v6-inject.js：扫描器 + 状态机 +
  *      KaTeX 数学公式 + Mermaid 查看器 + SVG 流式占位，挂 window.__vcpStable）
+ *
+ * 前端代际兼容（2026-08-24 适配）：
+ *   - rc.5~rc.7（旧锚点组）：vc / hp，case 函数参数 (n,r,i)
+ *   - rc.8 / 0.1.1-rc.x（新锚点组）：压缩器改名 Xu / jd（rc.8 为 Sd），
+ *     case 函数参数 (n,i,l)；CASE_ORIG 字符串恰好未变，属性循环与注入点换新组，
+ *     style 解析内联不依赖 jd/Sd 函数名；v6-inject.js 经 __vcpVc/__vcpHp
+ *     运行时探测兼容两代
  *
  * 实现策略：区间替换 + 幂等 + 多级安全网
  *   - case"html" 分支：原始态精确替换；增强态（v1/v2/v4/v5 均形如
  *     `case"html":return function(){...return n.value}();`）按「起止锚点」
  *     区间替换，不依赖各版本完整文本 → 对未知中间态更鲁棒
- *   - vc 属性循环：同上（增强态形如 `for(const c of i.attributes){...s[c.name]=c.value}`）
+ *   - vc/Xu 属性循环：同上（增强态形如 `for(const c of i.attributes){...s[c.name]=c.value}`）
  *   - 幂等：bundle 已含 window.__vcpStable → 跳过
  *   - 备份：index-*.js.bak-installv6-<时间戳>；每个锚点要求恰好命中，
  *     写回后 node --check + v6 特征校验，失败自动回滚
@@ -86,6 +93,20 @@ const VC_V6 = String.raw`for(const c of i.attributes){if(c.name==="onclick"){con
 const VC_DEF_BEFORE = String.raw`}function vc(n,r){`
 const V6_MARK = 'window.__vcpStable'
 
+// ---- 新前端锚点（dsh-web-frontend 0.1.0-rc.8+ / 0.1.1-rc.x · index-CA9Bpko5.js / index-ClqxG24t.js）----
+// rc.8 起压缩器重构改名：vc→Xu、hp→jd（rc.8 为 Sd）、case 函数参数 (n,r,i)→(n,i,l)。
+// CASE_ORIG 字符串恰好未变（仍恰好 1 处）；属性循环与注入点换新组；style 解析内联、不依赖 jd/Sd 函数名。
+const VC_NEW_START = String.raw`for(const d of l.attributes)`
+const VC_NEW_END = String.raw`u[d.name]=d.value;`
+const VC_DEF_NEW_BEFORE = String.raw`}function Xu(n,i){`
+const SCRIPT_FILTER_NEW = String.raw`if(l.localName==="script"||l.localName==="iframe"||l.localName==="object"||l.localName==="embed")return null;`
+
+// case"html" → v6（新版：流式标记在 context 参数 l 上）
+const CASE_V6_NEW = String.raw`case"html":return function(){if(typeof localStorage!=="undefined"&&localStorage.getItem("dsh.rawHtml")==="1"){try{var vr=window.__vcpStable&&window.__vcpStable.render(n.value,l.streaming);if(vr!==null&&vr!==undefined)return vr}catch(e){}}return n.value}();`
+
+// vc(Xu) 属性循环 → v6（新版变量名 d/l/u；style 解析内联，含 onclick 桥 / 词边界过滤 / URL 白名单 / ref 锁定）
+const VC_V6_NEW = String.raw`for(const d of l.attributes){if(d.name==="onclick"){const m=/^input\s*\(\s*['"]([\s\S]*?)['"]\s*\)\s*;?\s*$/.exec(d.value);if(m)u.onClick=function(){const fn=window.__dshInput;fn&&fn(m[1])};continue}if(/^on/i.test(d.name))continue;if(d.name==="style"){let sv=d.value;sv=sv.replace(/position\s*:\s*fixed\s*;?/gi,"").replace(/z-index\s*:\s*\d{4,}\s*;?/gi,"").replace(/(?<![\w-])content\s*:[^;]*;?/gi,"");let so={};for(const st of sv.split(";")){const ci=st.indexOf(":");if(ci===-1)continue;const k=st.slice(0,ci).trim().replace(/-([a-z])/g,(x,y)=>y.toUpperCase());so[k]=st.slice(ci+1).trim()}u.style=so;u.ref=function(el){if(el)for(const st2 of sv.split(";")){const j=st2.indexOf(":");if(j===-1)continue;const p=st2.slice(0,j).trim(),v=st2.slice(j+1).trim();if(v&&/^(color|font-family|font-size|font-weight|font-style|line-height|letter-spacing|text-align|text-shadow)$/.test(p))el.style.setProperty(p,v,"important")}};continue}if(d.name==="class"){u.className=d.value;continue}if(d.name==="href"&&!/^(https?:|mailto:|\/|#)/i.test(d.value))continue;if(d.name==="src"&&!/^(https?:|data:image\/|\/|#)/i.test(d.value))continue;u[d.name]=d.value}`
+
 // ---- 工具 ------------------------------------------------------------------
 function countOccurrences(text, needle) {
   return text.split(needle).length - 1
@@ -142,13 +163,18 @@ function main() {
   fs.copyFileSync(file, bak)
   console.log('[install-v6] 备份:', bak)
 
+  // 前端代际探测：rc.8+ 压缩器改名（Xu/jd 或 Sd），锚点组不同
+  const isNewFrontend = t.includes('function Xu(n,i){') && !t.includes('function vc(n,r){')
+  if (isNewFrontend) console.log('[install-v6] 探测到新版前端（rc.8+ · Xu 压缩形态），使用新锚点组')
+  const caseTarget = isNewFrontend ? CASE_V6_NEW : CASE_V6
+
   let next = t
 
   // 1) case"html" 分支 → v6
   if (countOccurrences(next, CASE_ORIG) === 1) {
-    next = replaceOnce(next, CASE_ORIG, CASE_V6, 'case"html"(原始)')
-  } else if (countOccurrences(next, CASE_ENHANCED_START) === 1 && countOccurrences(next, CASE_ENHANCED_END) >= 1) {
-    next = replaceRange(next, CASE_ENHANCED_START, CASE_ENHANCED_END, CASE_V6, 'case"html"(增强态)')
+    next = replaceOnce(next, CASE_ORIG, caseTarget, 'case"html"(原始)')
+  } else if (!isNewFrontend && countOccurrences(next, CASE_ENHANCED_START) === 1 && countOccurrences(next, CASE_ENHANCED_END) >= 1) {
+    next = replaceRange(next, CASE_ENHANCED_START, CASE_ENHANCED_END, caseTarget, 'case"html"(增强态)')
   } else {
     console.error('[install-v6] ✗ case"html" 分支：既非原始态也非已补丁增强态，无法识别。')
     console.error('[install-v6]   可能是 dsh 版本过新导致压缩代码变化，已安全中止（备份已保留，未写入修改）。')
@@ -160,8 +186,11 @@ function main() {
   }
   console.log('[install-v6] ✓ case"html" 分支 → v6')
 
-  // 2) vc() 属性循环 → v6
-  if (countOccurrences(next, VC_ORIG) === 1) {
+  // 2) vc(Xu) 属性循环 → v6
+  if (isNewFrontend) {
+    // rc.8+：原始态区间替换（起点/终点不含 jd/Sd 函数名，两版通用），额外补 script 过滤
+    next = replaceRange(next, VC_NEW_START, VC_NEW_END, SCRIPT_FILTER_NEW + VC_V6_NEW, 'Xu 属性循环(rc.8+ 原始态)')
+  } else if (countOccurrences(next, VC_ORIG) === 1) {
     // 原始态：无 script 过滤，需补上（与 v1 补丁行为一致）
     next = replaceOnce(next, VC_ORIG, SCRIPT_FILTER + VC_V6, 'vc 属性循环(原始)')
   } else if (countOccurrences(next, VC_ENHANCED_START) === 1) {
@@ -175,7 +204,7 @@ function main() {
     console.error('[install-v6] vc 属性循环替换失败，中止（备份已保留）。')
     process.exit(1)
   }
-  console.log('[install-v6] ✓ vc 属性循环 → v6')
+  console.log('[install-v6] ✓ vc(Xu) 属性循环 → v6')
 
   // 3) 注入 v6 稳定区模块
   let v6Inject = ''
@@ -185,12 +214,15 @@ function main() {
     console.error('[install-v6] 读取 patch/v6-inject.js 失败：', e.message)
     process.exit(1)
   }
-  next = replaceOnce(next, VC_DEF_BEFORE, '}' + v6Inject + ';function vc(n,r){', 'vc 定义前注入 v6 模块')
+  const defBefore = isNewFrontend ? VC_DEF_NEW_BEFORE : VC_DEF_BEFORE
+  const defAfter = isNewFrontend ? ';function Xu(n,i){' : ';function vc(n,r){'
+  const defLabel = isNewFrontend ? 'Xu 定义前注入 v6 模块' : 'vc 定义前注入 v6 模块'
+  next = replaceOnce(next, defBefore, '}' + v6Inject + defAfter, defLabel)
   if (next === null) {
     console.error('[install-v6] v6 模块注入失败，中止（备份已保留）。')
     process.exit(1)
   }
-  console.log('[install-v6] ✓ vc 定义前注入 v6 稳定区模块')
+  console.log(`[install-v6] ✓ ${defLabel}`)
 
   // 4) 写回
   fs.writeFileSync(file, next, 'utf8')
@@ -206,24 +238,29 @@ function main() {
   }
 
   const written = fs.readFileSync(file, 'utf8')
+  const onFilterMark = isNewFrontend ? 'if(/^on/i.test(d.name))continue;' : 'if(/^on/i.test(c.name))continue;'
   const features = [
     [V6_MARK, 'v6 标记 window.__vcpStable'],
     ['window.__dshInput', 'onclick 交互桥 __dshInput'],
     [String.raw`(?<![\w-])content`, 'content 词边界正则'],
-    ['if(/^on/i.test(c.name))continue;', 'on* 属性安全过滤'],
+    [onFilterMark, 'on* 属性安全过滤'],
     ['setProperty(p,v,"important")', '文字属性 !important 锁定'],
   ]
   for (const [mark, label] of features) {
     if (!written.includes(mark)) {
       ok = false
       console.error(`[install-v6] 特征缺失：${label}`)
-      const idx = written.indexOf(VC_ENHANCED_START)
+      const idx = written.indexOf(isNewFrontend ? VC_NEW_START : VC_ENHANCED_START)
       if (idx !== -1) console.error('[install-v6] debug vc 循环附近 >>>', JSON.stringify(written.slice(idx, idx + 260)))
     }
   }
   if (countOccurrences(written, CASE_ORIG) !== 0) {
     ok = false
     console.error('[install-v6] 特征异常：仍存在原始 case"html" 分支')
+  }
+  if (isNewFrontend && countOccurrences(written, String.raw`for(const d of l.attributes)d.name==="class"`) !== 0) {
+    ok = false
+    console.error('[install-v6] 特征异常：仍存在原始 Xu 属性循环')
   }
 
   if (!ok) {

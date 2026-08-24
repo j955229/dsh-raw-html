@@ -1,7 +1,8 @@
 # dsh-raw-html · 项目状态快照（PROGRESS.md）
 
 > 本文件是会话交接文档：任何新会话读到本文件即可恢复全部上下文。
-> 最后更新：2026-08-21（**克莉丝审计整改完成（P0+P1）· 5.4 on* 安全缺口已修复并重打 bundle**：① 5.4 安全——`parseOpen` 与 `VC_V6` 只放行 onclick 桥接、其余 on* 事件属性拒收（含 install-v6.cjs 特征校验 + security/stable/bundle 三套新增用例）；② 1.3 计时器 `t0` 归位 `render()` 入口；③ 5.1 文档失配——`package.json` `files` 补 tests/VCP-INTERACTIONS/FRAMING、README 对齐 v6、发布包补回 `tools/` 与 `tests/`；④ P1——`imgConvert`/`sanitizeStyle` 加快速守卫、`enhanceMermaid` 改 pointer 事件 + `setPointerCapture`（消长会话监听器泄漏）、`buildProtocolText` 瘦身约 74%；⑤ 补 `CHANGELOG.md` 与 `.gitignore`。bundle 已用新增 `patch/apply-onfilter.cjs` 重打，六套测试 225 项断言全绿）　**P2 整改同步完成**：⑥ 5.3 换开源字体——内置 12 款商业字库换成 7 款开源字体（霞鹜文楷 GB-Lite/马善政楷书/思源黑体×3 字重/Great Vibes，全 OFL），源存 `tools/font-src/`、子集化后约 7.6MB；⑦ 3.1 安全规则两处一致性测试（security.test.mjs 第 6 节）；⑧ 2.1 DESIGN.md 补胶片/青瓷两色板 + 协议「勿趋同」；⑨ 2.2 协议「明暗自适应」轻规则；⑩ 5.2 README 加「版本」小节。security 49 项断言全绿）　**可选增强（2.3/2.4/3.4）也已清零**：⑪ 2.3 注入 `prefers-reduced-motion` CSS 降级（纯 CSS，不动渲染逻辑）；⑫ 2.4 交互示例补 `:focus-visible` 焦点态 + 自检清单第 8 条；⑬ 3.4 魔数收拢为 8 个具名常量。bundle 已重打，六套测试全 PASS）
+> 最后更新：2026-08-21（当前版本 0.3.0 · 补丁 v6.16+ · 呼吸版协议已注入）。
+> 版本演进 / 审计整改明细一律见 CHANGELOG.md，本文件不再重复记录。
 
 ## 1. 项目是什么
 
@@ -34,6 +35,7 @@
 | P3-装帧 | **SVG 顶栏封面轻提示已注入系统提示词**（【故事装帧】段 + FRAMING.md 手册：可选加分项、设计自由不写死、技术要点、示例仅演示手法）——写故事/散文时模型可主动加封面 | ✅ 已写入 · 需重启 DSH 生效 |
 | P3-SVG流式 | **SVG 流式渲染修复（方案 A+B）**：根因——`<svg>` 不在 CommonMark HTML 块白名单（type 1-6），未闭合行被 mdast 当段落文本（显示代码），且 DOMParser 对半标签整体丢弃（空窗）。方案 A：协议铁律「SVG 一律包在 vcp-root 内」（div 白名单 → 首行即 HTML 块）；方案 B：v6 tail 半标签 → 「SVG 绘制中…」占位 span（已闭合内容照常渲染，标签写完占位自然消失） | ✅ 已应用，210 项断言全绿（43+59+15+33+38+22） |
 | ~~P3-SVG稳定~~ | ~~SVG 高度稳定（v6.6）~~：svg 半开标签 → 块级 div 占位 + aspect-ratio（解析 viewBox 比例）对齐最终高度防跳变。**先生实测观感不佳，已完整还原**（v6-inject.js / lib/index.js / stable.test.mjs / bundle 全部回退，bundle 已回注 v6.5） | ❌ 已还原（备份 `.v66-20260820-195234`） |
+| P3-美学 | **lieflat 编辑美学迁移**：新增 `EDITORIAL.md`（四色系/四件套/视觉词汇库/非图表迁移/自检）+ 协议按需指针——用户明确要 汇总/卡片/图表/排版/海报/装帧 时才读，普通回复零 token 开销；渲染层与格式规范零改动 | ✅ 已写入 · 需重启 DSH 生效 |
 
 ## 3. 关键文件（改动清单）
 

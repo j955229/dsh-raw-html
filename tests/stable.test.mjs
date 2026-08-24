@@ -127,7 +127,7 @@ console.log('== 1. 容器未闭合期间：内部子块固化 ==')
   const r1 = s.render(f1, true)
   ok('帧1：容器元素渲染（空内容）', () => {
     assert.equal(r1.type, 'div')
-    assert.equal(r1.props.id, 'vcp-root')
+    assert.match(r1.props.id, /^vcp-msg-\d+$/) // v6.12 消息级作用域化：唯一 id
     assert.equal(Array.isArray(r1.props.children), true)
     assert.equal(r1.props.children.length, 0)
   })
@@ -183,7 +183,7 @@ console.log('== 2. 容器闭合帧全量兜底 + 闭合后顶层块增量 ==')
   ok('帧3：容器闭合后结构完整（vcp-root 包裹 h3）', () => {
     const roots = collect(r3)
     assert.equal(roots[0].tag, 'div')
-    assert.equal(roots[0].props.id, 'vcp-root')
+    assert.match(roots[0].props.id, /^vcp-msg-\d+$/)
     assert.equal(findTag(r3, 'h3').length, 1)
   })
 
@@ -192,7 +192,7 @@ console.log('== 2. 容器闭合帧全量兜底 + 闭合后顶层块增量 ==')
     assert.equal(r4.type, f.Fragment)
     const roots = topChildren(r4)
     assert.equal(roots.length, 2)
-    assert.equal(roots[0].props.id, 'vcp-root')
+    assert.match(roots[0].props.id, /^vcp-msg-\d+$/)
     assert.equal(roots[1].props.style.color, 'red')
   })
   ok('帧4：vcp-root 块内部 h3 完整', () => {
@@ -514,6 +514,46 @@ console.log('== 13. on* 事件属性过滤（安全缺口 5.4 修复）==')
     const root = collect(r2)[0]
     assert.equal(root.props.onload, undefined)
     assert.equal(root.props.style.color, 'red')
+  })
+}
+
+console.log('== 14. 消息级作用域化：后卡样式不污染前卡（v6.12）==')
+{
+  // 两条独立消息，各自带 vcp-root + 相同类名但不同配色——v6.12 之前
+  // 后一条的 style（同特异性、文档靠后）会把前一条染掉；现在每条消息
+  // 根容器唯一 id（vcp-msg-N）+ style 内 #vcp-root 同步替换，互不串扰。
+  // 注意：选择器必须按 VCP 协议写 #vcp-root 前缀（裸类不在协议保护范围）。
+  const s = resetCache()
+  const msgA = '<div id="vcp-root"><style>#vcp-root .wrap{background:#faf8f4;color:#333}</style><p class="wrap">甲</p></div>'
+  const msgB = '<div id="vcp-root"><style>#vcp-root .wrap{background:#12051f;color:#eaff00}</style><p class="wrap">乙</p></div>'
+  const ra = s.render(msgA, false)
+  const rb = s.render(msgB, false)
+  const rootA = collect(ra).find(n => n.tag === 'div' && /^vcp-msg-\d+$/.test(n.props.id || ''))
+  const rootB = collect(rb).find(n => n.tag === 'div' && /^vcp-msg-\d+$/.test(n.props.id || ''))
+  const cssA = findTag(ra, 'style')[0].children.join('')
+  const cssB = findTag(rb, 'style')[0].children.join('')
+  ok('消息 A/B 根容器各得唯一 id（互不相同）', () => {
+    assert.ok(rootA && rootB, '两个根容器都存在且 id 形如 vcp-msg-N')
+    assert.notEqual(rootA.props.id, rootB.props.id, '两条消息 id 互不相同')
+  })
+  ok('A 的样式只命中 A 的 id（不再引用公共 #vcp-root）', () => {
+    assert.ok(cssA.includes('#' + rootA.props.id), 'A 的 CSS 引用 A 的 id')
+    assert.ok(!cssA.includes('#vcp-root'), 'A 的 CSS 不含公共 id')
+  })
+  ok('B 的样式只命中 B 的 id（不含 A 的 id / 公共 id）', () => {
+    assert.ok(cssB.includes('#' + rootB.props.id), 'B 的 CSS 引用 B 的 id')
+    assert.ok(!cssB.includes('#' + rootA.props.id), 'B 的 CSS 不含 A 的 id')
+    assert.ok(!cssB.includes('#vcp-root'), 'B 的 CSS 不含公共 id')
+  })
+  // 流式同一消息跨帧：uid 稳定（缓存键不抖动、固化块引用不重建）
+  const s2 = resetCache()
+  const f1 = '<div id="vcp-root" style="background:#0a2540">'
+  const f2 = f1 + '<p>hi</p>'
+  const r1 = s2.render(f1, true)
+  const r2 = s2.render(f2, true)
+  ok('流式同一消息跨帧 uid 稳定（引用不重建）', () => {
+    assert.equal(r1.props.id, r2.props.id, '根 id 跨帧不变')
+    assert.match(r2.props.id, /^vcp-msg-\d+$/)
   })
 }
 

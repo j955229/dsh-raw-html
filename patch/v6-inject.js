@@ -1,8 +1,14 @@
+/*__DSH_V6_INJECT_START__*/
 /**
- * dsh-raw-html v6 —— 稳定区固化模块（注入 dsh-web-frontend bundle 用）。
+ * dsh-raw-html v6.18 —— 稳定区固化模块（注入 dsh-web-frontend bundle 用）。
  *
- * 本文件无 import/export，直接以文本形式注入到 bundle 的 vc() 定义之前：
+ * v6.17：声明式配色桥接（chromeForProps/applyColorVars/injectRootChrome/makeMathRef）
+ *        + 流式锚定锁（anchorLock/anchorUnlock）+ ref 闭包缓存（__vcpRefSetter）。
+ * v6.18：__vcpVc/__vcpHp 宿主别名（兼容 rc.8+ 的 Xu/jd/Sd 改名）+ anchorUnlock 环境守卫。
+ *
+ * 本文件无 import/export，直接以文本形式注入到 bundle 的 vc()/Xu() 定义之前：
  * 依赖 bundle 模块作用域内的 vc / hp / f（React）与全局 window/DOMParser。
+ * rc.8+ 前端压缩器改名（vc→Xu、hp→jd/Sd），经 __vcpVc/__vcpHp 别名探测兼容两代。
  * 注入方式见 patch-frontend.cjs 的锚点 C。
  *
  * 核心：VCPChat 式增量渲染的 vdom 轻量版——
@@ -19,10 +25,20 @@
     if (typeof document !== 'undefined' && document.head && !document.getElementById('vcp-reduced-motion')) {
       var _rm = document.createElement('style')
       _rm.id = 'vcp-reduced-motion'
-      _rm.textContent = '@media (prefers-reduced-motion: reduce){#vcp-root,#vcp-root *{animation:none !important;transition:none !important}}'
+      _rm.textContent = '@media (prefers-reduced-motion: reduce){#vcp-root,[id^="vcp-msg-"],#vcp-root *,[id^="vcp-msg-"] *{animation:none !important;transition:none !important}}'
       document.head.appendChild(_rm)
     }
   } catch (e) {}
+  // 宿主函数别名（跨前端代际兼容）：rc.5~rc.7 为 vc/hp；rc.8+ 压缩器改名 Xu/jd（rc.8 为 Sd）。
+  // 运行时 typeof 探测——两代 bundle 通用，行为与旧版直接调用完全一致。
+  function __vcpVc() {
+    var fn = typeof vc === 'function' ? vc : (typeof Xu === 'function' ? Xu : null)
+    return fn && fn.apply(null, arguments)
+  }
+  function __vcpHp(s) {
+    var fn = typeof hp === 'function' ? hp : (typeof jd === 'function' ? jd : (typeof Sd === 'function' ? Sd : null))
+    return fn ? fn(s) : {}
+  }
   var F = window.__vcpFast || (window.__vcpFast = {
     c: new Map(),           // 整串缓存（v → 元素）
     open: null,             // 当前未闭合容器 { raw, end, props, tag }
@@ -30,6 +46,7 @@
     inner: [],              // 容器内已固化块 [{ s, el }]
     outer: [],              // 容器外已固化块 [{ s, el }]
     src: '',                // 全部固化块源码拼接（inner 在前 outer 在后）
+    colored: typeof WeakSet !== 'undefined' ? new WeakSet() : null, // 色彩注入幂等（自 B 移植）
     hits: 0, builds: 0, ms: 0, lastLog: 0, last: '', el: null
   })
 
@@ -86,6 +103,35 @@
     return text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, function (m) {
       return m.replace(/\n\s*\n/g, '\n')
     })
+  }
+
+  // ---- 消息级作用域化（v6.12）：根治「后卡样式污染前卡」----
+  // 现象：历史消息的 <style> 永不移除 + 所有消息共用 id="vcp-root" + CSS
+  // 层叠「同特异性后写覆盖先写」→ 后一条消息的样式会把前面所有消息染掉。
+  // 解法：每条消息的根容器分配唯一 id（vcp-msg-N），并把该消息 <style> 内的
+  // #vcp-root 选择器同步替换为 #vcp-msg-N——样式只命中自己的容器，互不串扰。
+  // 流式稳定性：同一消息跨帧复用同一 uid（前缀匹配判定），缓存键 v 不抖动，
+  // v6 增量缓存/固化块引用不受影响；多消息切换（前缀失配）自动换 uid。
+  var scopeLast = null
+  var scopeSeq = 0
+  function scopeVcp(raw) {
+    if (!raw || raw.indexOf('vcp-root') === -1) return raw
+    var hasRoot = /<div[^>]*\bid=["']vcp-root["']/i.test(raw)
+    if (!hasRoot && raw.indexOf('#vcp-root') === -1) return raw
+    var uid
+    if (scopeLast && raw.indexOf(scopeLast.raw) === 0) {
+      uid = scopeLast.uid
+    } else {
+      uid = 'vcp-msg-' + (++scopeSeq)
+    }
+    scopeLast = { raw: raw, uid: uid }
+    var out = raw.replace(/(<div[^>]*\bid=)["']vcp-root["']/i, '$1"' + uid + '"')
+    if (out.indexOf('#vcp-root') !== -1) {
+      out = out.replace(/(<style[^>]*>[\s\S]*?<\/style>)/gi, function (m) {
+        return m.replace(/#vcp-root/g, '#' + uid)
+      })
+    }
+    return out
   }
 
   function resetF() {
@@ -297,11 +343,11 @@
     if (h) {
       for (var k = 0; k < h.childNodes.length; k++) {
         var hn = h.childNodes[k]
-        if (hn.nodeType === 1 && (hn.localName === 'style' || hn.localName === 'link')) o.push(vc(hn, o.length))
+        if (hn.nodeType === 1 && (hn.localName === 'style' || hn.localName === 'link')) o.push(__vcpVc(hn, o.length))
       }
     }
     var b = doc.body
-    for (var j = 0; j < b.childNodes.length; j++) o.push(vc(b.childNodes[j], o.length))
+    for (var j = 0; j < b.childNodes.length; j++) o.push(__vcpVc(b.childNodes[j], o.length))
     if (!o.length) return null
     return o.length === 1 ? o[0] : f.jsx(f.Fragment, { children: o })
   }
@@ -320,7 +366,7 @@
             .replace(/position\s*:\s*fixed\s*;?/gi, '')
             .replace(/z-index\s*:\s*\d{4,}\s*;?/gi, '')
             .replace(/(?<![\w-])content\s*:[^;]*;?/gi, '')
-          props.style = hp(sv)
+          props.style = __vcpHp(sv)
           // 锁定文字属性优先级：容器开标签里的文字样式不被其他字体/主题插件覆盖
           props.ref = function (el) {
             if (!el) return
@@ -362,6 +408,7 @@
     resetF()
     var R = parseFrag(v)
     if (R) {
+      injectRootChrome(R)
       attachMathRef(R, streaming)
       if (streaming) scheduleMath()
       F.c.set((streaming ? 's:' : 'f:') + v, R)
@@ -385,13 +432,14 @@
   }
   function render(raw, streaming) {
     var t0 = typeof performance !== 'undefined' && performance.now ? performance.now() : 0
-    var v = sanitizeStyle(imgConvert(raw || ''))
+    var v = sanitizeStyle(imgConvert(scopeVcp(raw || '')))
     if (streaming) v = mathPlaceholder(v, true)
     v = mermaidBlockConvert(v)
     if (!v) return null
     if (!streaming) {
       // 非流式（流式结束后的最终帧 / 历史消息）：直接完整渲染，
       // 清空状态机，避免流式期间残留的残缺状态被复用导致泄漏。
+      followStop()
       return fullRender(v, false)
     }
     // 流式：未闭合标签防御——仅当整个 html 连一个 '>' 都没有（首个开标签写到一半）
@@ -439,7 +487,12 @@
       var kids = []
       for (var i = 0; i < F.inner.length; i++) kids.push(F.inner[i].el)
       if (tailEl) kids.push(tailEl)
-      R = f.jsx(F.open.tag, Object.assign({}, F.open.props, { children: kids }))
+      var cProps = Object.assign({}, F.open.props, { children: kids })
+      var ch = chromeForProps(F.open.props)
+      if (ch) cProps.style = Object.assign({}, cProps.style, ch.vars, ch.base)
+      if (!F.open.mathRef) F.open.mathRef = makeMathRef(F.open.props.ref)
+      cProps.ref = F.open.mathRef
+      R = f.jsx(F.open.tag, cProps)
       var outers = []
       for (var j = 0; j < F.outer.length; j++) outers.push(F.outer[j].el)
       if (outers.length > 0) R = f.jsx(f.Fragment, { children: [R].concat(outers) })
@@ -453,6 +506,7 @@
     if (R) {
       attachMathRef(R, true)
       scheduleMath()
+      ensureStreamingNoFollow()
       F.c.set(key, R)
       if (F.c.size > CACHE_MAX) F.c.clear()
     }
@@ -933,7 +987,186 @@
       if (lastMathEl && lastMathEl.isConnected !== false && window.__vcpMath) {
         window.__vcpMath.processMath(lastMathEl)
       }
+      followStop()
     }, MATH_DEBOUNCE_MS)
+  }
+
+  // ---- VCP 色彩引擎：data-vcp-* → --vcp-* CSS 变量（自 B 移植 · 克莉丝 2026-08-24）----
+  // 引擎（assets/vendor/VCPColorEngine.js）由 client.js 经 /vendor 加载，挂 window.VCPColorEngine。
+  // 模型只写声明（data-vcp-preset / data-vcp-soul / data-vcp-accent），hex 由引擎确定性生成
+  // ——流式重建结果恒定、对比度/色域闭环保证。变量注入走 style 对象或 el.style.setProperty，
+  // 统一只写 hex（引擎 generate() 已做 sRGB 色域裁剪，无需 oklch 二次映射）。
+  function chromeForProps(props) {
+    if (!props || typeof props !== 'object') return null
+    if ('__vcpChrome' in props) return props.__vcpChrome
+    var wants = props['data-vcp-preset'] || props['data-vcp-movement'] || props['data-vcp-soul'] || props['data-vcp-accent'] || props['data-vcp-mode']
+    if (!wants) { props.__vcpChrome = null; return null }
+    var engine = window.__vcpColor || window.VCPColorEngine
+    if (!engine || typeof engine.generate !== 'function') return null // 引擎未就绪：不缓存，下帧重试
+    try {
+      var opts = {}
+      if (props['data-vcp-preset']) opts.movement = props['data-vcp-preset']
+      else if (props['data-vcp-movement']) opts.movement = props['data-vcp-movement']
+      if (props['data-vcp-mode']) opts.mode = props['data-vcp-mode']
+      if (props['data-vcp-soul']) {
+        var sp = props['data-vcp-soul'].split(',')
+        var s0 = parseFloat(sp[0]); if (!isNaN(s0)) opts.thermalSoul = s0
+        var s1 = parseFloat(sp[1]); if (!isNaN(s1)) opts.valence = s1
+        var s2 = parseFloat(sp[2]); if (!isNaN(s2)) opts.arousal = s2
+        var s3 = parseFloat(sp[3]); if (!isNaN(s3)) opts.entropy = s3
+      }
+      if (props['data-vcp-accent']) {
+        if (props['data-vcp-accent'].charAt(0) === '#') opts.accentHex = props['data-vcp-accent']
+        else opts.accentHue = parseFloat(props['data-vcp-accent'])
+      }
+      var pal = engine.generate(opts)
+      var hex = pal.hex || {}
+      var vars = {}
+      for (var k in hex) {
+        if (!Object.prototype.hasOwnProperty.call(hex, k)) continue
+        vars['--vcp-' + k.replace(/[A-Z]/g, function (m) { return '-' + m.toLowerCase() })] = hex[k]
+      }
+      var st = props.style || null
+      var has = function (p) { return !!(st && st[p]) }
+      var base = {}
+      if (!has('background') && !has('backgroundColor')) base.background = 'var(--vcp-base)'
+      if (!has('color')) base.color = 'var(--vcp-text-primary)'
+      if (!has('padding') && !has('paddingTop') && !has('paddingLeft')) base.padding = '20px'
+      if (!has('borderRadius')) base.borderRadius = '16px'
+      if (!has('border') && !has('borderColor')) base.border = '1px solid var(--vcp-border)'
+      if (!has('boxSizing')) base.boxSizing = 'border-box'
+      if (!has('fontFamily')) base.fontFamily = "ui-sans-serif,system-ui,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif"
+      if (!has('lineHeight')) base.lineHeight = '1.6'
+      if (!has('display')) base.display = 'block'
+      if (!has('width')) base.width = '100%'
+      props.__vcpChrome = { vars: vars, base: base }
+      return props.__vcpChrome
+    } catch (e) { return null }
+  }
+
+  // DOM 层幂等注入（挂载 ref 触发）：dataset 声明 → --vcp-* + 基座；引擎未就绪时
+  // 清标记返回，下帧重试。数据声明（data-vcp-*）用后即删，DOM 保持干净。
+  function applyColorVars(el) {
+    if (!el || el.nodeType !== 1 || !el.dataset) return
+    if (F.colored && F.colored.has(el)) return
+    if (el.dataset.vcpColorDone === 'true') return
+    var ds = el.dataset
+    var wants = ds.vcpPreset || ds.vcpMovement || ds.vcpSoul || ds.vcpAccent
+    if (!wants) return
+    el.dataset.vcpColorDone = 'true'
+    var engine = window.__vcpColor || window.VCPColorEngine
+    if (!engine || typeof engine.generate !== 'function') { el.dataset.vcpColorDone = ''; return }
+    try {
+      var opts2 = {}
+      if (ds.vcpPreset) opts2.movement = ds.vcpPreset
+      else if (ds.vcpMovement) opts2.movement = ds.vcpMovement
+      if (ds.vcpMode) opts2.mode = ds.vcpMode
+      if (ds.vcpSoul) {
+        var sp2 = ds.vcpSoul.split(',')
+        var t0 = parseFloat(sp2[0]); if (!isNaN(t0)) opts2.thermalSoul = t0
+        var t1 = parseFloat(sp2[1]); if (!isNaN(t1)) opts2.valence = t1
+        var t2 = parseFloat(sp2[2]); if (!isNaN(t2)) opts2.arousal = t2
+        var t3 = parseFloat(sp2[3]); if (!isNaN(t3)) opts2.entropy = t3
+      }
+      if (ds.vcpAccent) {
+        if (ds.vcpAccent.charAt(0) === '#') opts2.accentHex = ds.vcpAccent
+        else opts2.accentHue = parseFloat(ds.vcpAccent)
+      }
+      var pal = engine.generate(opts2)
+      if (F.colored) F.colored.add(el)
+      var hex = pal.hex || {}
+      for (var k in hex) {
+        if (!Object.prototype.hasOwnProperty.call(hex, k)) continue
+        var kebab = k.replace(/[A-Z]/g, function (m) { return '-' + m.toLowerCase() })
+        el.style.setProperty('--vcp-' + kebab, hex[k])
+      }
+      try {
+        var bs = el.style
+        var has2 = function (p) { return !!(bs.getPropertyValue(p) || '') }
+        if (!has2('background') && !has2('background-color')) bs.setProperty('background', 'var(--vcp-base)')
+        if (!has2('color')) bs.setProperty('color', 'var(--vcp-text-primary)')
+        if (!has2('padding') && !has2('padding-top') && !has2('padding-left')) bs.setProperty('padding', '20px')
+        if (!has2('border-radius')) bs.setProperty('border-radius', '16px')
+        if (!has2('border') && !has2('border-color')) bs.setProperty('border', '1px solid var(--vcp-border)')
+        if (!has2('box-sizing')) bs.setProperty('box-sizing', 'border-box')
+        if (!has2('font-family')) bs.setProperty('font-family', "ui-sans-serif,system-ui,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif")
+        if (!has2('line-height')) bs.setProperty('line-height', '1.6')
+        if (!has2('display')) bs.setProperty('display', 'block')
+        if (!has2('width')) bs.setProperty('width', '100%')
+      } catch (e) { /* 基座补齐失败不影响 */ }
+      try {
+        delete el.dataset.vcpPreset
+        delete el.dataset.vcpMovement
+        delete el.dataset.vcpSoul
+        delete el.dataset.vcpMode
+        delete el.dataset.vcpAccent
+        delete el.dataset.vcpColorDone
+      } catch (e) { /* dataset 清理失败不影响 */ }
+    } catch (e) { /* 颜色注入失败不影响渲染 */ }
+  }
+
+  // 全量路径根容器基座：fullRender（流式切片/历史/终帧）给带 data-vcp-* 的根容器
+  // 注入 --vcp-* 变量与卡片基座——背景从第一帧就在场。
+  function injectRootChrome(R) {
+    if (!R || typeof R !== 'object') return
+    var el = R
+    if (el.type === f.Fragment && el.props && Array.isArray(el.props.children) && el.props.children.length) {
+      el = el.props.children[0]
+    }
+    if (!el || typeof el !== 'object' || !el.props) return
+    var ch = chromeForProps(el.props)
+    if (!ch) return
+    try { el.props.style = Object.assign({}, el.props.style, ch.vars, ch.base) } catch (e) { /* 注入失败不影响 */ }
+  }
+
+  // 流式容器 ref（自 B 移植）：挂载时一次性注入色彩变量并登记数学处理目标。
+  // 闭包缓存在 F.open.mathRef 上跨帧复用——容器 jsx 每帧重建，但 ref 身份必须稳定，
+  // 否则 React 每帧 old(null)/new(el) 重新调用 → 每帧 setProperty('important') 风暴。
+  function makeMathRef(oldRef) {
+    var mr = function (el) {
+      if (oldRef) oldRef(el)
+      if (el && el.nodeType === 1) {
+        applyColorVars(el)
+        if (window.__vcpMath) lastMathEl = el
+      }
+    }
+    mr.__vcpMathRef = true
+    return mr
+  }
+
+  // ---- 流式期间禁用自动下滚（自 B 移植 · 全局锚定锁，CSS-only）----------------
+  // 抖动的最小公因数是「流式期间视口每帧移动」：浏览器原生锚定（overflow-anchor）
+  // 在内容增长时强制贴底，视口一动就与 fill-box 动画叠加而闪；视口静止则几乎零抖动。
+  // 流式期间注入 `html,body,html *{overflow-anchor:none!important}` 强制关闭原生锚定，
+  // 停顿 600ms（scheduleMath 防抖）后移除，行为恢复原样。普通 Markdown 流式不经
+  // render()，不受影响。（B 的 scrollTop setter 劫持版追踪器因属性遮蔽泄漏风险未移植，
+  // 留待需要时再上——锚定锁已覆盖绝大多数场景。）
+  var NFS = { lockEl: null }
+  function anchorLock() {
+    if (NFS.lockEl || typeof document === 'undefined' || !document.head) return
+    var st = document.createElement('style')
+    st.id = 'vcp-anchor-lock'
+    st.setAttribute('data-plugin', 'vcp-render')
+    st.textContent = 'html,body,html *{overflow-anchor:none!important}'
+    document.head.appendChild(st)
+    NFS.lockEl = st
+    try { document.documentElement.style.overflowAnchor = 'none' } catch (e) {}
+    if (document.body) { try { document.body.style.overflowAnchor = 'none' } catch (e) {} }
+  }
+  function anchorUnlock() {
+    var st = NFS.lockEl
+    if (st && st.parentNode) st.parentNode.removeChild(st)
+    NFS.lockEl = null
+    if (typeof document === 'undefined') return
+    try { document.documentElement.style.overflowAnchor = '' } catch (e) {}
+    if (document.body) { try { document.body.style.overflowAnchor = '' } catch (e) {} }
+  }
+  function ensureStreamingNoFollow() {
+    if (NFS.lockEl || typeof document === 'undefined') return
+    anchorLock()
+  }
+  function followStop() {
+    anchorUnlock()
   }
 
   // 给 React 元素树顶层元素挂「挂载后处理」ref。
@@ -945,19 +1178,27 @@
     if (!node || typeof node !== 'object') return
     var isEl = (node.type && node.type !== f.Fragment) || !!node.tag
     if (isEl) {
-      var oldRef = ('ref' in node ? node.ref : (node.props && node.props.ref)) || null
-      var setter = function (el) {
-        if (oldRef) oldRef(el)
-        if (el && el.nodeType === 1 && window.__vcpMath) {
-          if (streaming) {
-            lastMathEl = el
-          } else {
-            window.__vcpMath.processMath(el)
+      var curRef = ('ref' in node ? node.ref : (node.props && node.props.ref)) || null
+      if (curRef && curRef.__vcpMathRef) return
+      var cached = node.__vcpRefSetter
+      if (!cached) {
+        cached = node.__vcpRefSetter = function (el) {
+          if (curRef) curRef(el)
+          if (el && el.nodeType === 1) {
+            applyColorVars(el)
+            if (window.__vcpMath) {
+              if (streaming) {
+                lastMathEl = el
+              } else {
+                window.__vcpMath.processMath(el)
+              }
+            }
           }
         }
+        cached.__vcpMathRef = true
       }
-      if ('ref' in node) node.ref = setter
-      else node.props.ref = setter
+      if ('ref' in node) node.ref = cached
+      else node.props.ref = cached
       return
     }
     var ch = node.props && node.props.children
@@ -979,8 +1220,11 @@
     enhanceMermaid: enhanceMermaid,
     processMath: processMath,
     katexFontFor: katexFontFor,
-    lockKatexStyles: lockKatexStyles
+    lockKatexStyles: lockKatexStyles,
+    applyColorVars: applyColorVars,
+    chromeForProps: chromeForProps
   }
 
   window.__vcpStable = { render: render }
 })()
+/*__DSH_V6_INJECT_END__*/

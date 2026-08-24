@@ -22,16 +22,24 @@
     "./package.json": "./package.json"
   },
   "files": [
-    "lib",
+    "lib/*.js",
     "assets",
-    "patch",
-    "tools",
-    "tests",
+    "patch/*.js",
+    "patch/*.cjs",
+    "tools/*.cjs",
+    "tools/*.py",
+    "tests/*.mjs",
+    "tests/*.cjs",
+    "docs",
     "cordis.patch.yml",
     "DESIGN.md",
     "README.md",
+    "README.en.md",
+    "CHANGELOG.md",
     "VCP-INTERACTIONS.md",
-    "FRAMING.md"
+    "FRAMING.md",
+    "EDITORIAL.md",
+    "BREATH.md"
   ],
   "dsh": {
     "bundle": {
@@ -49,10 +57,10 @@
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.1",
-    "react": "^18.2.0"
+    "react": "^18.3.1"
   },
   "license": "MIT",
-  "dependencies": {
+  "optionalDependencies": {
     "@deepseek-ai/schemastery": "^3.18.1"
   }
 }

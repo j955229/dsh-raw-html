@@ -1,8 +1,8 @@
 # 蓝汐 · 视觉设计系统（DESIGN.md）
 
-> 蓝汐的「美学方法论」知识库。VCP 协议要求逐帖按设计原则决策；
-> 本文件沉淀原理、令牌与自检清单，随先生反馈持续迭代。
-> 定位：不是模板库，而是「为什么好看」的底层依据。
+> 定位：**纯技术参考手册**——字体资产、中文排版、安全铁律、色板速查。
+> 审美（编辑感 / 四色系 / 视觉词汇库）见 [EDITORIAL.md](./EDITORIAL.md)；灵魂（呼吸法）见 [BREATH.md](./BREATH.md)。
+> AI 本身具备基础审美，本文件不教「怎么好看」，只给「会崩 / 会错 / 先生骂过」的技术约束与资产。
 
 ---
 
@@ -14,56 +14,45 @@
 
 > 用法：`@font-face{font-family:'Lanxi-WenKai';src:url('/fonts/Lanxi-WenKai.woff2');}` 后引用。由 `tools/subset_fonts.py` 生成（GB2312 一级 3755 字 + 标点 + 数字序号）。全部为开源授权字体（OFL/Apache），随包分发无授权风险。
 
-| 领域 | font-family 名 | /fonts/ 路径 | 体积 | 授权 |
-|---|---|---|---|---|
-| 楷书 | `Lanxi-WenKai` | Lanxi-WenKai.woff2 | 883KB | OFL（霞鹜文楷 GB-Lite） |
-| 楷书·细 | `Lanxi-WenKaiLight` | Lanxi-WenKaiLight.woff2 | 921KB | OFL（霞鹜文楷 GB-Lite） |
-| 手写楷 | `Lanxi-MaShanZheng` | Lanxi-MaShanZheng.woff2 | 1.7MB | OFL（马善政楷书） |
-| 黑体 | `Lanxi-HeiTi` | Lanxi-HeiTi.woff2 | 1.3MB | OFL（思源黑体） |
-| 黑体·细 | `Lanxi-HeiTiLight` | Lanxi-HeiTiLight.woff2 | 1.3MB | OFL（思源黑体） |
-| 黑体·粗 | `Lanxi-HeiTiBold` | Lanxi-HeiTiBold.woff2 | 1.4MB | OFL（思源黑体） |
-| 英文花体 | `Lanxi-GreatVibes` | Lanxi-GreatVibes.woff2 | 44KB | OFL（Great Vibes） |
+| 领域 | font-family 名 | /fonts/ 路径 | 体积 |
+|---|---|---|---|
+| 楷书 | `Lanxi-WenKai` | Lanxi-WenKai.woff2 | 883KB |
+| 楷书·细 | `Lanxi-WenKaiLight` | Lanxi-WenKaiLight.woff2 | 921KB |
+| 手写楷 | `Lanxi-MaShanZheng` | Lanxi-MaShanZheng.woff2 | 1.7MB |
+| 黑体 | `Lanxi-HeiTi` | Lanxi-HeiTi.woff2 | 1.3MB |
+| 黑体·细 | `Lanxi-HeiTiLight` | Lanxi-HeiTiLight.woff2 | 1.3MB |
+| 黑体·粗 | `Lanxi-HeiTiBold` | Lanxi-HeiTiBold.woff2 | 1.4MB |
+| 英文花体 | `Lanxi-GreatVibes` | Lanxi-GreatVibes.woff2 | 44KB |
 
 ### 0.1 外置全量（可选配置字体根目录后可用 · 参考清单 · 用户自备）
 
 > ⚠️ 外置大库为用户**自备**字体（非随包分发），下列清单仅供参考；其中可能含商业字库，授权由用户自行确认。内置精选（0.0）已全部开源。
 
-| 风格 | 字体（font-family 名） | 相对路径（/fonts/ 之后） | 适合 |
-|---|---|---|---|
-| 书法·皇家 | `Lanxi-瘦金书` | `方正所有字体/02/FZfonts/FZSZJW.TTF` | 古风标题、牌匾、庆典题字 |
-| 书法·石刻 | `Lanxi-魏碑` | `方正所有字体/02/FZfonts/FZWBJW.TTF` | 庄重、碑刻感、古典 |
-| 书法·隶意 | `Lanxi-隶书` | `方正所有字体/02/FZfonts/FZLSJW.TTF` | 端正古雅、匾额 |
-| 书法·狂草 | `Lanxi-行草` | `方正所有字体/02/FZfonts/FZXBSJW.TTF` | 意境、自由、大写意 |
-| 书法·简牍 | `Lanxi-汉简` | `方正所有字体/02/FZfonts/FZHCJW.TTF` | 先秦古风、竹简气韵 |
-| 书法·铁筋 | `Lanxi-铁筋隶书` | `方正所有字体/02/FZfonts/FZTJLSJW.TTF` | 硬朗隶书、独特 |
-| 书法·手写 | `Lanxi-叶根友` | `bb1213/bb1213/叶根友特色简体升级版.ttf` | 手写便签、亲笔感 |
-| 书法·舒体 | `Lanxi-舒体` | `方正所有字体/02/FZfonts/FZSTJW.TTF` | 行书舒展、题词 |
-| 艺术·装饰 | `Lanxi-黄金时代` | `造字工房最全字体-2016-01-06更新/艺术字体/MFTheGoldenEra_Noncommercial-Bold.ttf` | 复古装饰、惊艳标题 ⭐ |
-| 艺术·优雅 | `Lanxi-尚雅` | `造字工房最全字体-2016-01-06更新/艺术字体/MFShangYa_Noncommercial-Regular.ttf` | 雅致、女性向、品牌感 |
-| 艺术·前卫 | `Lanxi-点黑` | `造字工房最全字体-2016-01-06更新/黑体系列/MFDianHei_Noncommercial-Regular.ttf` | 现代、科技、个性 |
-| 艺术·几何 | `Lanxi-菱心体` | `常用字体/汉仪菱心体简.ttf` | 切割几何、海报、动感 ⭐ |
-| 艺术·海报 | `Lanxi-海报体` | `常用字体/华康海报体W12(P).ttf` | 港风海报、复古广告 ⭐ |
-| 艺术·综艺 | `Lanxi-综艺` | `方正所有字体/02/FZfonts/FZZHYJW.TTF` | 综艺节目、强视觉 |
-| 极细·空灵 | `Lanxi-静黑超细` | `造字工房最全字体-2016-01-06更新/黑体系列/MFJingHei_Noncommercial-UltLight.ttf` | 极简、禅意、高级感 ⭐ |
-| 极细·秀美 | `Lanxi-浪倩` | `造字工房最全字体-2016-01-06更新/艺术字体/MFLangQian_Noncommercial-Regular.ttf` | 秀气、文艺、诗 |
-| 可爱·萌系 | `Lanxi-喵喵` | `造字工房最全字体-2016-01-06更新/艺术字体/MFMiaoMiao_Noncommercial-Regular.ttf` | 萌、可爱、轻松 ⭐ |
-| 可爱·手绘 | `Lanxi-叮叮` | `造字工房最全字体-2016-01-06更新/手绘字体/MFDingDing_Noncommercial-Regular.ttf` | 涂鸦手账、随性 |
-| 可爱·卡通 | `Lanxi-卡通` | `常用字体/迷你简卡通.TTF` | 童趣、插画 |
-| 宋体·精致 | `Lanxi-品宋` | `造字工房最全字体-2016-01-06更新/宋体系列/MFPinSong_Noncommercial-Regular.ttf` | 精致正文、书籍感 |
-| 宋体·颜韵 | `Lanxi-颜宋` | `造字工房最全字体-2016-01-06更新/宋体系列/MFYanSong_Noncommercial-Regular.ttf` | 颜体笔意、敦厚 |
-| 冲击·超粗 | `Lanxi-超粗黑` | `方正所有字体/02/FZfonts/FZCCHJW.TTF` | 大字报、强调、震撼 |
-| 花体·英文 | `Lanxi-GreatVibes` | `Great-Vibes/GreatVibes-Regular-2.otf` | 英文花体标题、情书、邀请函、仪式感 ⭐ |
-
-### 0.2 场景搭配速查
-
-| 场景/话题 | 标题字体 | 点缀 | 正文 |
-|---|---|---|---|
-| 古风/诗词/汉服 | WenKai / MaShanZheng | WenKaiLight | 系统无衬线 |
-| 文学/书信/情感 | WenKaiLight / MaShanZheng | WenKai | 系统无衬线 |
-| 科技/数据/代码 | HeiTiBold | HeiTiLight | 系统无衬线 + 等宽 |
-| 极简/禅意/优雅 | HeiTiLight / WenKaiLight | WenKai | 系统无衬线 |
-| 庆典/标题/强调 | HeiTiBold | GreatVibes | 系统无衬线 |
-| 英文标题/情书 | GreatVibes | WenKaiLight | 系统无衬线 |
+| 风格 | 字体（font-family 名） | 相对路径（/fonts/ 之后） |
+|---|---|---|
+| 书法·皇家 | `Lanxi-瘦金书` | `方正所有字体/02/FZfonts/FZSZJW.TTF` |
+| 书法·石刻 | `Lanxi-魏碑` | `方正所有字体/02/FZfonts/FZWBJW.TTF` |
+| 书法·隶意 | `Lanxi-隶书` | `方正所有字体/02/FZfonts/FZLSJW.TTF` |
+| 书法·狂草 | `Lanxi-行草` | `方正所有字体/02/FZfonts/FZXBSJW.TTF` |
+| 书法·简牍 | `Lanxi-汉简` | `方正所有字体/02/FZfonts/FZHCJW.TTF` |
+| 书法·铁筋 | `Lanxi-铁筋隶书` | `方正所有字体/02/FZfonts/FZTJLSJW.TTF` |
+| 书法·手写 | `Lanxi-叶根友` | `bb1213/bb1213/叶根友特色简体升级版.ttf` |
+| 书法·舒体 | `Lanxi-舒体` | `方正所有字体/02/FZfonts/FZSTJW.TTF` |
+| 艺术·装饰 | `Lanxi-黄金时代` | `造字工房最全字体-2016-01-06更新/艺术字体/MFTheGoldenEra_Noncommercial-Bold.ttf` |
+| 艺术·优雅 | `Lanxi-尚雅` | `造字工房最全字体-2016-01-06更新/艺术字体/MFShangYa_Noncommercial-Regular.ttf` |
+| 艺术·前卫 | `Lanxi-点黑` | `造字工房最全字体-2016-01-06更新/黑体系列/MFDianHei_Noncommercial-Regular.ttf` |
+| 艺术·几何 | `Lanxi-菱心体` | `常用字体/汉仪菱心体简.ttf` |
+| 艺术·海报 | `Lanxi-海报体` | `常用字体/华康海报体W12(P).ttf` |
+| 艺术·综艺 | `Lanxi-综艺` | `方正所有字体/02/FZfonts/FZZHYJW.TTF` |
+| 极细·空灵 | `Lanxi-静黑超细` | `造字工房最全字体-2016-01-06更新/黑体系列/MFJingHei_Noncommercial-UltLight.ttf` |
+| 极细·秀美 | `Lanxi-浪倩` | `造字工房最全字体-2016-01-06更新/艺术字体/MFLangQian_Noncommercial-Regular.ttf` |
+| 可爱·萌系 | `Lanxi-喵喵` | `造字工房最全字体-2016-01-06更新/艺术字体/MFMiaoMiao_Noncommercial-Regular.ttf` |
+| 可爱·手绘 | `Lanxi-叮叮` | `造字工房最全字体-2016-01-06更新/手绘字体/MFDingDing_Noncommercial-Regular.ttf` |
+| 可爱·卡通 | `Lanxi-卡通` | `常用字体/迷你简卡通.TTF` |
+| 宋体·精致 | `Lanxi-品宋` | `造字工房最全字体-2016-01-06更新/宋体系列/MFPinSong_Noncommercial-Regular.ttf` |
+| 宋体·颜韵 | `Lanxi-颜宋` | `造字工房最全字体-2016-01-06更新/宋体系列/MFYanSong_Noncommercial-Regular.ttf` |
+| 冲击·超粗 | `Lanxi-超粗黑` | `方正所有字体/02/FZfonts/FZCCHJW.TTF` |
+| 花体·英文 | `Lanxi-GreatVibes` | `Great-Vibes/GreatVibes-Regular-2.otf` |
 
 ### 0.3 @font-face 模板（直接抄）
 
@@ -73,157 +62,78 @@
 ```
 
 ### 0.4 注意
-- 单帖最多 1-2 款艺术字体（woff2 子集 0.9-1.7MB，浏览器缓存但首载仍建议克制）；正文永远系统无衬线。
-- 英文花体已收录 `Lanxi-GreatVibes`（Great Vibes，44KB 轻量）；更多西文花体可继续放入外置字体库。
-- 内置字体源存于 `tools/font-src/`（开源 TTF/OTF），改动后重跑 `tools/subset_fonts.py` 再生 woff2。
-- 中文字体通常自带西文字符，但艺术体的西文可能不够「花体」，英文标题优先用 Lanxi-GreatVibes 或系统衬线。
-- **皮肤覆盖对抗（重要）**：GUI 的 maid-atelier 皮肤「字体设置」会注入带 `!important` 的全局字体覆盖（选择器 `[data-pane="conversation"] [data-chat-anchor-key] :where(...)`，特异性 (0,2,0)），把消息区文本字体强制换成用户设置的字体。对策：使用自定义字体时，`font-family` 声明**必须加 `!important`** 且选择器以 `#vcp-root` 前缀（特异性 (1,1,0) 压过皮肤）；或给目标元素加 `data-skin-chrome` 属性直接绕开覆盖。字号同理（皮肤可能也覆盖 font-size）。
+- 单帖最多 1-2 款艺术字体（woff2 子集 0.9-1.7MB，克制）；正文永远系统无衬线。
+- 内置字体源存 `tools/font-src/`，改动后重跑 `tools/subset_fonts.py`。
+- **皮肤覆盖对抗（技术铁律）**：maid-atelier 皮肤会注入带 `!important` 的全局字体覆盖（特异性 (0,2,0)），强制换消息区字体。对策：`font-family` 声明**必须加 `!important`** 且选择器以 `#vcp-root` 前缀（特异性 (1,1,0) 压过）；或加 `data-skin-chrome` 属性绕开。字号同理。
 
 ---
 
-## 1. 色彩系统
+## 1. 色板参考（色纸卡 · 只查值）
 
-### 1.1 先定场景，再定色板
+> **默认基调（先生定调）**：浅纸底 + 墨色 + 明度即层级（lieflat）；深色系黑底 + 白字+对比撞色。
+> 四色系（Mono / porcelain / palm / wire）与选色逻辑见 [EDITORIAL.md §1](./EDITORIAL.md)。
 
-| 场景 | 基底（背景） | 正文 | 点缀 | 情绪 |
+| 色板 | 基底 | 正文 | accent | 描边 |
 |---|---|---|---|---|
-| 技术 / 数据 / 沉浸 | 深色：深蓝 `#0a2540`~`#123a5e`、墨蓝黑 `#06121f` | 高亮浅色 `#e8f2fb`~`#f4fbff`（≥7:1） | 荧光青 `#40dcff` 单一 accent | 冷静、专注、结构美 |
-| 长文 / 情感 / 正式 | 浅色：米白 `#faf6ef`、暖灰 `#f2f0ea` | 深灰 `#2b2b28`（≥4.5:1） | 琥珀 `#b98a3e`、暖棕点缀 | 温暖、可信、耐读 |
-| 警告 / 错误 | 深底或白底 + 高对比 | 白或黑 | 琥珀 `#ffb020` / 朱红 `#e5484d` | 紧张、醒目 |
-| 庆祝 / 娱乐 | 可深可浅 | 高对比 | 多彩但降饱和 | 活泼、轻松 |
+| 深海琉璃（仅大屏/终端） | `linear-gradient(165deg,#051322,#0a2540 42%,#0e3a5c 72%,#06283f)` | `#e8f2fb` | `#7fd4ff`/`#40dcff` | `rgba(170,225,255,.16)` |
+| 暖纸书房 | `#faf6ef` | `#2b2b28` | `#8a6d3b` | `#e4dccb` |
+| 终端绿幕（仅终端） | `#0d1117` | `#c9d1d9` | `#3fb950` | — |
+| 胶片黄昏 | `linear-gradient(165deg,#1a0f0a,#3a1f14 55%,#5c2e1c)` | `#f4e9d8` | `#e0a458` | `rgba(224,164,88,.18)` |
+| 青瓷素雅 | `linear-gradient(165deg,#eef4f1,#e3ede8 60%,#d7e4dd)` | `#2a3a33` | `#4e8a6e` | `#c8d8cf` |
 
-### 1.2 硬规则
-- 同一帖 **主色 ≤ 2 个** + 中性色（白/黑/灰）。
-- 背景-正文对比：正文 **≥ 4.5:1**（WCAG AA），标题 ≥ 3:1 亦可但尽量高。
-- 深色底用亮青/月白点缀；浅色底用深色点缀——**点缀色必须与基底同明度域**，否则刺眼。
-- 大面积色相不超过 1 个；渐变控制在相邻色相（如蓝→青→月白）。
-- 透明度（rgba）模拟通透，但文字所在的卡片背景至少 60% 不透明，保证对比。
+### 1.5 声明式配色（可选 · 免写 hex · 渲染层色彩引擎代劳）
 
-### 1.3 参考令牌（实测可用）
-- 深海琉璃（深色）：bg `linear-gradient(165deg,#051322,#0a2540 42%,#0e3a5c 72%,#06283f)`；文字 `#e8f2fb`；accent `#7fd4ff`/`#40dcff`；描边 `rgba(170,225,255,.16)`。
-- 暖纸书房（浅色）：bg `#faf6ef` + 微纹理；文字 `#2b2b28`；accent `#8a6d3b`；卡片 `#fffdf8` 细描边 `#e4dccb`。
-- 终端绿幕（极客）：bg `#0d1117`；文字 `#c9d1d9`；accent 绿 `#3fb950` + 等宽字体。
-- 胶片黄昏（暖色怀旧）：bg `linear-gradient(165deg,#1a0f0a,#3a1f14 55%,#5c2e1c)`；文字 `#f4e9d8`；accent `#e0a458`；描边 `rgba(224,164,88,.18)`。
-- 青瓷素雅（浅色冷调）：bg `linear-gradient(165deg,#eef4f1,#e3ede8 60%,#d7e4dd)`；文字 `#2a3a33`；accent `#4e8a6e`；卡片 `#f7faf8` 细描边 `#c8d8cf`。
+不想手写色值时，在根容器声明预设，渲染层自动生成整套 `--vcp-*` 色板变量 + 卡片基座（背景/文字色/内边距 20px/圆角 16px/边框），对比度与色域由引擎闭环保证（正文≥4.5:1）。子元素用 `var(--vcp-base)` / `var(--vcp-surface)` / `var(--vcp-border)` / `var(--vcp-text-primary)` / `var(--vcp-text-muted)` / `var(--vcp-accent-primary)` / `var(--vcp-code-bg)` / `var(--vcp-danger)` 取值；显式声明过的样式不会被覆盖。
 
----
+```html
+<div id="vcp-root" data-vcp-preset="editorial"><!-- 内容 --></div>
+```
 
-## 2. 字体排印
-
-### 2.1 字体分级（Font Scale）
-| 角色 | 字体 | 字号 | 字重 | 字距 | 说明 |
-|---|---|---|---|---|---|
-| 主标题 | 衬线（Songti/思源宋体）或加粗无衬线 | 20-24px | 600-700 | 0.5-1.5px | 情感/文学用衬线；技术用无衬线 |
-| 副标题 | 无衬线 | 13-14px | 500 | 2-4px 宽字距 | 大写化或全宽字距更精致 |
-| 正文 | 无衬线（PingFang SC/微软雅黑/Segoe UI） | 14-15px | 400 | 0 | 行高 1.6-1.8，行宽 45-90 字符 |
-| 标签/徽章 | 无衬线 | 11-12px | 500 | 1px | 圆角胶囊、低饱和底 |
-| 代码 | 等宽（Consolas/JetBrains Mono/Cascadia Code） | 12.5-13.5px | 400 | 0 | 代码块底色比正文底深/浅一档 |
-
-### 2.2 硬规则
-- 正文禁用衬线、禁用超细字重（<400）、禁用纯白 on 纯黑（对比过高刺眼，用 `#f4f4f0`）。
-- 中文标题避免全大写；英文标题可 uppercase + 宽字距。
-- 行高：正文 ≥ 1.6；标题 1.2-1.35。
-- 数字/数据用等宽或 tabular-nums，保证对齐。
+- 五大流派预设：`editorial`（编辑部）/ `chiaroscuro`（明暗法）/ `fauvism`（野兽派）/ `cyberpunk`（赛博）/ `wabi_sabi`（侘寂）；另有 `cyber-hacker` / `jiangnan-scholar`（江南书生）/ `void-prophet`（虚空先知）人格。
+- 自定义：`data-vcp-mode="dark|light"`、`data-vcp-soul="色温K,愉悦度,激惹度,熵"`（如 `18000,-0.2,0.6,0.1`）、`data-vcp-accent="#00ff66"` 或色相角（如 `140`）。
+- 依赖渲染层色彩引擎（浏览器经 /vendor 加载，未就绪时自动降级——根容器需自带 style 兜底）。
 
 ---
 
-## 2.5 中文排版规范（文章 / 小说 / 正式文档）
+## 2. 中文排版（硬规则 · 先生骂过）
 
-> 依据《中文排版需求》(W3C CLREQ 体系) 与国内出版惯例整理（[中文排版需求演进](https://developer.baidu.com/article/detail.html?id=3681172)、[中文排版指南](https://github.com/aaranxu/chinese-copywriting-guidelines)、[出版排版规则](https://blog.csdn.net/chenby186119/article/details/150154906)）。「魔女的初飞」一帖踩过的坑：小标题不够大、正文没缩进。
-
-- **首行缩进**：正文段落首行缩进 **2 个汉字宽度**（CSS `text-indent: 2em`；中文 1em ≈ 1 汉字宽）。段落之间**不靠空行区分**（段距 0），靠首行缩进——这是中文书籍/文章的惯例；网页可酌情加段距，但缩进必须保留。
-- **标题字号阶梯（小标题比正文大 2 号）**：中文字号制相邻差 1 号（八号 5.5pt → 七号 5.5 → 小六 6.5 → 六号 7.5 → 小五 9 → 五号 10.5pt/14px → 小四 12pt/16px → 四号 14pt/18.7px → 小三 15pt/20px → 三号 16pt → 小二 18pt → 二号 22pt → 小一 24pt → 一号 26pt）。推荐：正文 **14-15px（五号）**，章节小标题 **18-20px（四号~小三）＝ 比正文大 2 号**，大标题 **22-24px（二号~小一）**；小标题加粗或换字体以更醒目。
-- **行距**：正文行高 **1.5-2**（书籍常用 1.25-1.5 倍；屏幕阅读取 1.7-1.9 更舒适）；标题行高 1.2-1.35。
-- **对齐**：正文**两端对齐**（`text-align: justify`），中文正文不要居中（除标题/诗歌外）。
-- **标点**：一律**全角中文标点**（，。！？「」……）；避免英文半角标点混入中文；弯引号「」『』优先于直角引号（网页可混用）。
-- **字距**：正文不加字距（`letter-spacing: 0`）；标题可略加（0.5-2px）但不能破坏汉字笔画节奏。
-- **背题与孤行**：小标题不要孤悬在区块底部（标题与其后第一段同块）；段落避免出现孤行（首行在页尾/末行在页首）——卡片布局中至少让标题+首段在一起。
-- **西文/数字混排**：中文中夹英文与数字用半角，并在中西文之间加空格（如「iOS 与 Android」）；段落内英文句子独立成段时用全角语境。
-- **段内换行**：叙事段落内不硬换行，由内容自然分段。
+- **首行缩进**：正文自然段首行缩进 **2 汉字宽**（`text-indent: 2em`）；段间**不靠空行区分**、靠缩进（网页可加段距，缩进必须保留）。
+- **字号阶梯**：正文 **14-15px（五号）**，小标题 **18-20px（四号~小三）＝比正文大 2 号**，大标题 **22-24px（二号~小一）**。
+- **行距**：正文行高 **1.6-1.8**；标题 1.2-1.35。
+- **对齐**：正文两端对齐（`text-align: justify`）；中文正文不居中（标题/诗歌除外）。
+- **标点**：一律全角中文标点（，。！？「」……）；弯引号「」『』优先。
+- **字距**：正文不加字距（`letter-spacing: 0`）；标题可略加 0.5-2px。
+- **背题孤行**：小标题不与后段分离（标题+首段同块）；正文避免孤行。
+- **中西混排**：英文/数字用半角，中西文之间加空格（如「iOS 与 Android」）。
 
 ---
 
-## 3. 布局与层级
+## 3. 落笔后：只确认会不会崩（不逐条自查）
 
-- 网格对齐（Grid/Flex），**留白 ≥ 16px**，块间距 ≥ 12px。
-- 视觉层级：主标题 → 副题 → 正文 → 标签/操作；每块一个焦点。
-- 长内容分块（卡片/分区）；短内容居中（聚焦）。
-- 容器最大宽度 680-760px，圆角 16-24px，深浅风格统一圆角半径。
-- 阴影：外层 1 层（深色投影）+ 内层 1 层（顶部高光 `inset 0 1px 0 rgba(255,255,255,.1)`）。
+审美与灵魂在动笔前已内化——灵魂三问见 BREATH.md §4，数据可视化契约见 EDITORIAL.md，装帧克制见 FRAMING.md。落笔后**唯一**要确认的是下面「§4 安全铁律」那 8 条会不会崩；不要逐条自查、不要为自检延长思考。
 
 ---
 
-## 4. 自检清单（每帖渲染前过一遍）
+## 4. 安全铁律（违反必出 bug）
 
-0. **叙事帖先查正文排版**：每个自然段落首行是否 `text-indent: 2em`（缩进 2 汉字）？
-   段落间是否**不用空行**、靠缩进区分？正文有没有被顶格、挤成一片？（小说/故事装帧必查，先生亲自骂过）引文/强调框不算自然段，不缩进。
-1. 文字与背景对比 ≥ 4.5:1？（拿不准就用极浅 on 极深，或极深 on 极浅）
-2. 一眼能否分清「标题 / 正文 / 操作」三级？
-3. 删掉任何装饰（光晕/纹理/SVG），正文语义依然完整成立？
-4. 主色 ≤ 2？动效 ≤ 2？视觉层 ≤ 200 行？
-5. 代码块是否用 `<pre>` + 等宽 + 独立底色？
-6. 交互是否只用白名单原语？（`<details>` 折叠 / radio·checkbox hack 选项卡 / CSS 动画轮播 / `onclick="input('...')"` 按钮；一律零 JS、无自定义事件）
-7. 有没有 `<script>`、外链脚本、onclick 之外的事件？（一律禁止）
-8. 交互元素是否有键盘焦点态？（radio/checkbox hack 的 label 加 `:focus-visible` 焦点环，Tab 遍历可见）
+1. **vcp-root 内禁止空行**（`\n\n`）——markdown HTML 块遇空行即拆，背景只包顶部一条、下方溢出。子元素单换行或单行，分组用 margin。写完查 `\n\n` 次数为 0。
+2. **禁 backdrop-filter**——子背景用实色多层渐变（rgba 叠加 + 细描边 + 内高光）；`#vcp-root` 显式 `display:block;width:100%;box-sizing:border-box;overflow:hidden`。
+3. **交互只放行 `onclick="input('...')"`**——不写 `<script>`/外链脚本/其他 `on*` 事件（安全白名单见 [VCP-INTERACTIONS.md](./VCP-INTERACTIONS.md)）。
+4. **流式三规则**——① 开标签后**紧贴**首元素（勿换行/空格）；② `<style>` 沉**卡尾**；③ 子块少换行。违反则整卡一次性展开、无流式。
+5. **code 成对设色**——深容器「更深底 #0a1626 + 亮青 #bfe9ff」；浅容器「浅灰底 #f0f0ea + 深红 #b03a2e / 深蓝 #1f5fa8」。禁止只设一面。
+6. **关键排版属性内联 style**——`<style>` 只放 @font-face 与 @keyframes（级联损耗，部分规则不达）。
+7. **字号被皮肤压制**——内联 `!important`（`#vcp-root` 前缀）或 `transform:scale(1.3~1.5)`+`transform-origin:left center` 兜底；书法细体配 `text-shadow` 增重。
+8. **容器内元素同明度域**——深色容器内的 code/徽章/按钮背景也须深色，禁白块亮块抢戏。
 
 ---
 
-## 5. 常见错误（先生骂过的 & 自查发现）
+## 5. 交互元素
 
-| 错误 | 修正 |
-|---|---|
-| 平铺纯色块、无层次 | 加渐变底 + 半透明卡片 + 描边 + 内高光 |
-| 背景太花、文字糊 | 文字层加 `backdrop-filter` 或实底卡片，保证对比 |
-| 高饱和撞色（青底红字等） | 降饱和、同明度域、主色 ≤ 2 |
-| 动效堆砌（每元素都动画） | 全帖 ≤ 2 个动画 |
-| 行高 1.2 的正文（挤） | 正文行高 1.6-1.8 |
-| 标题正文同样大小 | 建立字号阶梯（24/15/12） |
-| 装饰挤压内容 | 先内容后装饰，装饰密度随严肃度递减 |
-| 小标题字号被全局字体设置压制（font-size 级联失效，内联 !important 也无效——皮肤/主题会强制统一消息区字号） | ① 关键属性（text-indent/font-size/letter-spacing）一律**内联 style**（走 React 原生 style 对象，必达）；② 字号仍被压制时用 `transform:scale(1.3~1.5)` + `transform-origin:left center` 视觉放大兜底（物理必达，不参与字体级联）；③ 书法细笔画体（WenKai 等）配 `text-shadow` 描边光晕增重 |
-| 排版关键属性写在 `<style>` 规则里不可靠（部分规则在渲染链中损耗） | `<style>` 只放 @font-face 与 @keyframes；所有关键排版属性内联 |
-| 内联 code 只设背景色忘了文字色（白底白字/黑底黑字灾难） | **code 必须成对设置背景+文字色**：深色容器用「更深底 #0a1626 + 亮青字 #bfe9ff」；浅色容器用「浅灰底 #f0f0ea + 深红 #b03a2e / 深蓝 #1f5fa8」；与正文颜色明显区分，禁止只给一面 |
-| 深色容器里出现「白块」或「亮块」背景元素 | 容器内所有自带背景的元素（code/徽章/按钮）背景色必须与容器同明度域（深色容器用深色底），否则亮块抢戏且与浅字撞色 |
-| 子卡片用 backdrop-filter 导致大容器高度塌陷（背景只包顶部一条横框，长内容/多子框时触发） | **弃用 backdrop-filter**：子卡片/子背景一律用实色多层渐变（rgba 叠加 + 细描边 + 内高光）模拟玻璃感；#vcp-root 显式 `display:block;width:100%;box-sizing:border-box;overflow:hidden`，背景完整包裹所有子内容 |
-| vcp-root 内部出现空行（\n\n）→ 背景只包顶部一条、下方内容全部溢出容器（markdown 的 HTML 块遇到空行即结束，把卡片拆成多个独立节点，实测 2026-08-19 确认） | **vcp-root 内部禁止空行（铁律）**：所有子元素用单个换行或单行排列；需要视觉分组时用 margin 而不是空行；写完检查 `value.includes('\\n\\n')` 必须为 false |
-| 小说/故事装帧时正文段落顶格、没缩进、被挤成一片（先生骂过：该空两个中文字却顶格） | **叙事帖每个自然段落首行 `text-indent: 2em`**（内联 style）；段落间不用空行、用 margin；引文/强调框不算自然段不缩进；封面可有可无，正文排版必须规范 |
+> 交互元素（折叠 / 选项卡 / 手风琴 / 轮播 / 按钮）与渲染层安全白名单的唯一权威见 [VCP-INTERACTIONS.md](./VCP-INTERACTIONS.md)。
 
----
+## 6. 故事装帧 · SVG 顶栏封面
 
-## 6. 迭代机制
-
-- 先生每次对视觉提出反馈（「丑」「刺眼」「看不清」）→ 蓝汐把根因提炼为规则
-  追加到第 5 节，并同步改进协议文本（`lib/index.js` 的 PROTOCOL_TEXT）。
-- 遇到新的内容形态（图表、流程、时间线、投票……）→ 蓝汐在会话中即兴设计，
-  把可复用的版式沉淀到本文件。
-
----
-
-## 7. 交互元素（P1 · 白名单交互第一弹）
-
-> 完整手册与示例代码见 [VCP-INTERACTIONS.md](./VCP-INTERACTIONS.md)。
-> 渲染层（vc() 增强 v2）支持的原生交互全部**零 JS**：
-
-| 交互 | 实现 | 要点 |
-|---|---|---|
-| 折叠 | `<details><summary>` | 浏览器原生，`open` 属性控制默认展开 |
-| 选项卡 | radio hack（隐藏 input + label + `:checked` 兄弟选择器） | 面板默认隐藏，选中才显示；样式定义在 `<style>` |
-| 手风琴 | checkbox hack（同选项卡思路） | 可同时展开多个 |
-| 自动轮播 | CSS `@keyframes` 平移循环（infinite） | 无手动切换，时长建议 4-8s/屏 |
-| 按钮发送 | `<button onclick="input('...')">` | 唯一放行的 JS 通道，点击真实发送该文本 |
-
-**流式注意**：流式输出中元素会被反复重建，**交互状态（展开/选中）可能重置**——
-交互元素放在卡片稳定结构内，交互在流结束后使用。动画（infinite）流式中保留，
-一次性入场动画流式中被剥离（防闪），流结束统一播放。
-
-**安全边界（v2 生效）**：href 仅放行 http/https/mailto/相对路径/锚点；src 仅放行
-http/https/data:image/相对路径/锚点；style 中 `position:fixed`、`z-index>=1000`、
-`content:`（伪元素注入）会被剥离；script/iframe/object/embed 一律过滤。
-
-## 8. 故事装帧 · SVG 顶栏封面（可选加分项 · 2026-08-21 新增）
-
-- **定位**：叙事类回复（故事/小说/散文/书信/诗歌）可在卡片顶部加一个内联 SVG 小顶栏封面（宽满、高约 140-200px、viewBox 等比缩放、圆角+投影片），让开篇像杂志封面一样有仪式感。
-- **原则**：设计自由、灵气至上——配色/插画/字体由 agent 人格与故事主题决定，禁止照抄模板、禁止复用；FRAMING.md 只教「怎么实现」，不规定「长什么样」。
-- **技术**：svg viewBox 定比例 + width:100%;height:auto；渐变放 defs（id 加 cover- 前缀）；标题用 text（英文花体 Lanxi-GreatVibes，中文衬线/书法体）；剪影插画两三笔；不嵌外链/脚本/animate；对比度与行数克制（SVG ≤ 40 行，整帖 ≤ 200 行）。
-- **完整手册**：见同目录 FRAMING.md（含实现骨架与风格示例，示例仅演示手法、禁止照搬）。
+> 叙事类回复（故事 / 小说 / 散文 / 书信 / 诗歌）可在卡片顶部加内联 SVG 小顶栏封面。
+> 完整手册见 [FRAMING.md](./FRAMING.md)（怎么实现 + 骨架 + 风格示例，示例仅演示手法、禁止照搬）。
 
 *—— 蓝汐 · 深蓝深海频道 · 美学是理解，不是模板 ——*

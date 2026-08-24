@@ -140,17 +140,51 @@ try {
 }
 const VC_DEF_AFTER = '}' + VC_INJECT + ';function vc(n,r){'
 
+// ---- v6 模块更新：已注入（含标记）→ 就地替换整块；未注入 → 走锚点 C ----
+// v6.12 起支持幂等重打：v6-inject.js 首尾带 __DSH_V6_INJECT_START__/__END__ 标记，
+// 重跑补丁时直接把旧块换成新块，无需先恢复备份；旧版无标记注入也兼容升级。
+let v6Handled = false
+{
+  const START_MARK = '/*__DSH_V6_INJECT_START__*/'
+  const END_MARK = '/*__DSH_V6_INJECT_END__*/'
+  const si = t.indexOf(START_MARK)
+  const ei = t.indexOf(END_MARK)
+  if (si !== -1 && ei !== -1 && ei > si) {
+    t = t.slice(0, si) + VC_INJECT + t.slice(ei + END_MARK.length)
+    v6Handled = true
+    console.log('[patch] v6 模块就地更新（幂等重打）')
+  } else if (t.indexOf('window.__vcpStable = { render: render }') !== -1) {
+    // 旧版无标记注入（v6.12 之前打的补丁）：定位旧块首尾升级
+    const oldStart = ';(function () {\n  // 无障碍：'
+    const oldEnd = 'window.__vcpStable = { render: render }\n})()'
+    const s2 = t.indexOf(oldStart)
+    const e2 = t.indexOf(oldEnd)
+    if (s2 !== -1 && e2 !== -1 && e2 > s2) {
+      t = t.slice(0, s2) + VC_INJECT + t.slice(e2 + oldEnd.length)
+      v6Handled = true
+      console.log('[patch] 旧版 v6 模块就地升级（无标记注入）')
+    } else {
+      console.error('[patch] 检测到旧版 v6 注入但无法定位旧块边界，请先恢复 .bak 备份再重打')
+      process.exit(1)
+    }
+  }
+}
+
 /**
  * 替换表：label / from（必须唯一命中）/ to。
  * v6 补丁 = 锚点 C（注入稳定区模块）+ 锚点 A（case"html" 改调 render）。
  * 注：vc 属性循环（content 过滤 v2.1）已在 v5.1 应用，无需重复。
+ * 幂等：已应用的锚点（to 已存在）自动跳过；未应用的锚点（from 唯一命中）应用。
  */
-const REPLACEMENTS = [
-  {
+const REPLACEMENTS = []
+if (!v6Handled) {
+  REPLACEMENTS.push({
     label: 'C.注入 v6 稳定区模块（vc 定义前）',
     from: VC_DEF_BEFORE,
     to: VC_DEF_AFTER,
-  },
+  })
+}
+REPLACEMENTS.push(
   {
     label: 'B.vc content 正则加词边界（防误伤 justify-content）',
     from: CONTENT_RE_BEFORE,
@@ -166,17 +200,20 @@ const REPLACEMENTS = [
     from: CASE_HTML_BEFORE,
     to: CASE_HTML_V6_AFTER,
   },
-]
+)
 
 let changed = 0
 for (const r of REPLACEMENTS) {
   const count = t.split(r.from).length - 1
-  if (count !== 1) {
+  if (count === 1) {
+    t = t.split(r.from).join(r.to)
+    changed += 1
+  } else if (count === 0 && t.indexOf(r.to) !== -1) {
+    console.log(`[patch] 锚点 "${r.label}" 已应用，跳过`)
+  } else {
     console.error(`[patch] 锚点 "${r.label}" 命中 ${count} 次（需要恰好 1 次），中止，未写入任何修改`)
     process.exit(1)
   }
-  t = t.split(r.from).join(r.to)
-  changed += 1
 }
 
 // 备份原文件（仅当本次确有改动且尚无备份时）

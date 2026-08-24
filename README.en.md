@@ -20,7 +20,17 @@ in the browser → the browser renders HTML, the agent follows the design spec
 ![Banner 4](docs/images/banner-4.jpg)
 ![Banner 5](docs/images/banner-5.jpg)
 
-## 📣 What's New (v0.3.0 · audit hardening)
+## 📣 What's New (v0.3.0 · patch v6.18)
+
+**2026-08-24 updates**
+
+- **Fixed (frontend compatibility)**: `install-v6.cjs` now supports **dsh-web-frontend 0.1.0-rc.8 / 0.1.1-rc.x** (bundle `index-CA9Bpko5.js` / `index-ClqxG24t.js`), where the minifier renamed `vc`→`Xu` and `hp`→`jd`/`Sd`. A new anchor set with automatic generation detection was added; legacy anchors (rc.5~rc.7) are kept intact and regression-verified.
+- **Fixed (startup crash)**: removed the static `@deepseek-ai/schemastery` import from `lib/index.js` — the only third-party runtime dependency. It is now loaded dynamically with a graceful fallback, so the plugin boots fine even when `node_modules` is missing (static import chain is now built-in Node modules only).
+- **Feature**: declarative color presets — write `data-vcp-preset="editorial|chiaroscuro|fauvism|cyberpunk|wabi_sabi"` and the built-in VCPColorEngine deterministically generates the whole `--vcp-*` palette (WCAG contrast & sRGB gamut closed-loop; hex never passes through the LLM; stable across streaming rebuilds).
+- **Feature**: streaming anchor lock (CSS-only `overflow-anchor` lock) + cached ref closures — smoother streaming, no per-frame `setProperty` storms.
+- **Protocol**: render/aesthetic split toggles; active visual-synesthesia prompting; flow discipline moved to the structural layer (measured output −4.6K tokens/turn, cost −¥0.056).
+
+**Audit hardening (2026-08-21)**
 
 - **Security (P0)**: fixed the `on*` attribute passthrough gap (only the `onclick` bridge is allowed); fixed the performance-timer diagnostics; aligned documentation references.
 - **Performance (P1)**: fast guards for regex conversions, fixed the mermaid global-listener leak, protocol text slimmed by ~74%.
@@ -31,7 +41,7 @@ in the browser → the browser renders HTML, the agent follows the design spec
 ## Versioning
 
 - **Plugin version**: the `version` in `package.json` (currently **0.3.0**), upgraded via `dsh plugin`.
-- **Patch codename**: the evolution codename of the `patch/` injected modules (currently **v6**), applied to the frontend bundle by `install-v6.cjs`. The two evolve independently.
+- **Patch codename**: the evolution codename of the `patch/` injected modules (currently **v6 · sub-version v6.18**), applied to the frontend bundle by `install-v6.cjs`. The two evolve independently. Frontend compatibility: **0.0.1-rc.5 ~ 0.1.0-rc.7** and **0.1.0-rc.8 / 0.1.1-rc.x** (the `vc`/`hp` and `Xu`/`jd` minified shapes are auto-detected).
 
 ## Components
 
@@ -43,7 +53,7 @@ in the browser → the browser renders HTML, the agent follows the design spec
 | Plugin (host side) | `lib/index.js` | Toggle state (**persisted to disk**) + VCP protocol injected into the system prompt + `/fonts` font service (**built-in + external library dual source**) + shared knowledge (the protocol carries the local DESIGN.md path for any agent) |
 | Plugin (browser side) | `lib/client.js` | Injects the **「</>」toggle** next to the composer send button + exposes `window.__dshInput` (VCP button → fill & send) |
 | **Built-in fonts** | `assets/fonts/` | **7 open-source fonts (woff2 subsets, ~7.6MB) shipped with the plugin** — WenKai / WenKai Light / MaShanZheng / HeiTi / HeiTi Light / HeiTi Bold / GreatVibes, all OFL-licensed, zero config |
-| Design system docs | `DESIGN.md` | Full spec library: font list / palettes / layout / Chinese typography / self-check / common mistakes (knowledge layer; agents may read on demand) |
+| Design system docs | `DESIGN.md` | Full spec library: font list / palettes / Chinese typography / security iron laws (knowledge layer; agents may read on demand) |
 | Regression tests | `tests/` | Six suites (stable 47 + security 43 + bundle + smoke + math + mermaid, 200+ assertions): frame sequences / security filtering / bundle integrity (run after any engine change) |
 | Benchmark | `patch/vcp-fast-bench.cjs` | Compares old/new paths in a real DOM parsing environment (auto-downloads dependencies, zero install) |
 | Subset tool | `tools/subset_fonts.py` | For maintainers: trims new fonts to common-character subsets + woff2 compression (needs Python + fonttools + brotli) |
