@@ -116,10 +116,11 @@
 
 ## 4. 安全铁律（违反必出 bug）
 
+0. **输出纪律（最高优先级）**：视觉内容**直接输出 HTML 到回复正文**，由 GUI 自动渲染——这是 VCP 的唯一交付方式。**禁止**把 HTML 写入 .html 文件再丢路径/链接给用户（除非先生明确要求保存文件，此时正文仍须同步呈现核心内容）。「先生看不见的视觉」等于没做。
 1. **vcp-root 内禁止空行**（`\n\n`）——markdown HTML 块遇空行即拆，背景只包顶部一条、下方溢出。子元素单换行或单行，分组用 margin。写完查 `\n\n` 次数为 0。
 2. **禁 backdrop-filter**——子背景用实色多层渐变（rgba 叠加 + 细描边 + 内高光）；`#vcp-root` 显式 `display:block;width:100%;box-sizing:border-box;overflow:hidden`。
 3. **交互只放行 `onclick="input('...')"`**——不写 `<script>`/外链脚本/其他 `on*` 事件（安全白名单见 [VCP-INTERACTIONS.md](./VCP-INTERACTIONS.md)）。
-4. **流式三规则**——① 开标签后**紧贴**首元素（勿换行/空格）；② `<style>` 沉**卡尾**；③ 子块少换行。违反则整卡一次性展开、无流式。
+4. **流式三规则**——① 开标签后**紧贴**首元素（勿换行/空格）；② `<style>` 写在 #vcp-root 开标签后、内容之前；③ 子块少换行。违反则整卡一次性展开、无流式。
 5. **code 成对设色**——深容器「更深底 #0a1626 + 亮青 #bfe9ff」；浅容器「浅灰底 #f0f0ea + 深红 #b03a2e / 深蓝 #1f5fa8」。禁止只设一面。
 6. **关键排版属性内联 style**——`<style>` 只放 @font-face 与 @keyframes（级联损耗，部分规则不达）。
 7. **字号被皮肤压制**——内联 `!important`（`#vcp-root` 前缀）或 `transform:scale(1.3~1.5)`+`transform-origin:left center` 兜底；书法细体配 `text-shadow` 增重。

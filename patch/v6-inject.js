@@ -1,10 +1,20 @@
 /*__DSH_V6_INJECT_START__*/
 /**
- * dsh-raw-html v6.18 —— 稳定区固化模块（注入 dsh-web-frontend bundle 用）。
+ * dsh-raw-html v7.0 —— 稳定区固化模块（注入 dsh-web-frontend bundle 用）。
  *
- * v6.17：声明式配色桥接（chromeForProps/applyColorVars/injectRootChrome/makeMathRef）
- *        + 流式锚定锁（anchorLock/anchorUnlock）+ ref 闭包缓存（__vcpRefSetter）。
- * v6.18：__vcpVc/__vcpHp 宿主别名（兼容 rc.8+ 的 Xu/jd/Sd 改名）+ anchorUnlock 环境守卫。
+ * v7.0（自 v6.18 的一次大迭代 · 渲染器「自愈层」体系建立，先生实测驱动）：
+ *   - 流式样式即时生效：未闭合 <style> 补闭合 + closeBraces 花括号平衡 +
+ *     style 前置规范（背景/字体随流式逐步长出，不再最后才闪现）
+ *   - 消息级作用域化（#vcp-root → #vcp-msg-N）+ 文字声明 !important 保险
+ *   - 资源收敛：img max-width（大图不撑版）· svg 块级化限宽 · transform 动画
+ *     自动补 transform-box:fill-box（旋转/缩放不飘走）
+ *   - 自愈层全树覆盖：根/子容器 box-sizing · table/pre 溢出防护 · 表格防撑破
+ *     组合拳（width:100% + nowrap 单元格裁剪）· 缺背景补纸色底
+ *   - code 对比度三级阶梯模型（大背景→code→字逐级对比）+ 半透明叠加判定
+ *   - 代码围栏兜底（```html 包卡片自动剥离渲染，带渲染开关检查）
+ *   - 非流式（历史消息/终帧）路径同样执行 finalizeRoot 兜底
+ *
+ * 版本说明：v6.19~v6.32 的逐级迭代已归纳为本版本（详见 git 提交历史）。
  *
  * 本文件无 import/export，直接以文本形式注入到 bundle 的 vc()/Xu() 定义之前：
  * 依赖 bundle 模块作用域内的 vc / hp / f（React）与全局 window/DOMParser。
@@ -75,6 +85,29 @@
     })
   }
 
+  // ---- 图片收敛（v6.20）：流式期间 <img> 不超容器、不撑爆版面 ----
+  // 现象：卡片 <style> 沉卡尾，流式期间 img 的 width:100% 规则尚未写出，
+  // 图片以固有尺寸（原图可能巨大）直接撑爆版面，直到流式结束样式生效才回归。
+  // 解法：给所有 <img> 内联注入 max-width:100%;height:auto 兜底——第一帧就
+  // 生效、不依赖卡尾 <style>；与 <style> 的 width:100% 叠加结果一致，无冲突。
+  // 模型显式设宽（width / max-width）的图片不注入，尊重其意图。
+  var IMG_TAG_RE = /<img\b([^>]*?)\s*\/?>/gi
+  function constrainImg(text) {
+    if (!text || text.indexOf('<img') === -1) return text
+    return text.replace(IMG_TAG_RE, function (m, attrs) {
+      var sm = /\bstyle\s*=\s*(["'])([\s\S]*?)\1/i.exec(attrs)
+      var sv = sm ? sm[2] : ''
+      if (/(?:^|[;{])\s*(?:max-width|width)\s*:/i.test(sv)) return m
+      var inject = 'max-width:100%;height:auto'
+      if (sm) {
+        var q = sm[1]
+        var ns = sv ? sv + ';' + inject : inject
+        return '<img' + attrs.slice(0, sm.index) + 'style=' + q + ns + q + attrs.slice(sm.index + sm[0].length) + '>'
+      }
+      return '<img' + attrs + ' style="' + inject + '">'
+    })
+  }
+
   function stripOneShotAnim(text) {
     return text.replace(ANIM_RE, function (m, x) { return /infinite/.test(x) ? m : '' })
   }
@@ -105,11 +138,41 @@
     })
   }
 
+  // ---- 文字声明优先级提升（v6.19）：抵御字体/主题插件的全局覆盖 ----
+  // 现象：卡片 <style> 内的 font-family/font-size/color 等声明无 important，
+  // 被其他字体/主题插件注入的全局规则（如 *{font-family:...} 或 body 级
+  // !important）覆盖——先生实测主标题「华文行楷→楷体回落」56 号朱红大字
+  // 未能渲染出卡片声明的字体。KaTeX 走 lockKatexStyles、容器开标签内联
+  // style 走 parseOpen 的 ref 锁定，唯独 <style> 内声明缺一道优先级保险。
+  // 解法：源码层给 <style> 内的【文字类声明】追加 !important——配合 #vcp-msg-N
+  // 的高特异性选择器，压过插件的低特异性全局字体规则；只提升文字类
+  // （color/font-*/line-height/letter-spacing/text-align/text-shadow），
+  // 不动背景/布局/动画，卡内层叠关系不变；已有 important 跳过（幂等）。
+  // 值里不会出现 `;` / `!` / `}`（CSS 声明分隔符），故用 [^;!}] 安全取全值。
+  var BOOST_TEXT_DECL_RE = /(color|font-family|font-size|font-weight|font-style|line-height|letter-spacing|text-align|text-shadow)\s*:\s*([^;!}]+?)(!important)?\s*(;|})/gi
+  function boostTextImportant(css) {
+    if (!css) return css
+    return css.replace(BOOST_TEXT_DECL_RE, function (m, prop, val, imp, term) {
+      if (imp) return m
+      return prop + ':' + val + '!important' + term
+    })
+  }
+  function boostStyle(text) {
+    if (!text || text.indexOf('<style') === -1) return text
+    return text.replace(/(<style[^>]*>)([\s\S]*?)(<\/style>)/gi, function (m, open, css, close) {
+      return open + boostTextImportant(css) + close
+    })
+  }
+
   // ---- 消息级作用域化（v6.12）：根治「后卡样式污染前卡」----
   // 现象：历史消息的 <style> 永不移除 + 所有消息共用 id="vcp-root" + CSS
   // 层叠「同特异性后写覆盖先写」→ 后一条消息的样式会把前面所有消息染掉。
-  // 解法：每条消息的根容器分配唯一 id（vcp-msg-N），并把该消息 <style> 内的
+  // 解法：每条消息的根容器分配唯一 id（vcp-msg-N），并把该消息全文里的
   // #vcp-root 选择器同步替换为 #vcp-msg-N——样式只命中自己的容器，互不串扰。
+  // v6.19：改为全文全局替换（不再限定「完整闭合的 <style>」）——流式期间
+  // <style> 尚未闭合时（卡尾样式正在输出），其内的 #vcp-root 也要随帧替换，
+  // 否则补闭合渲染的活样式选择器仍指向 #vcp-root，匹配不到已改名的容器，
+  // 背景/字体在流式中不生效。
   // 流式稳定性：同一消息跨帧复用同一 uid（前缀匹配判定），缓存键 v 不抖动，
   // v6 增量缓存/固化块引用不受影响；多消息切换（前缀失配）自动换 uid。
   var scopeLast = null
@@ -126,11 +189,9 @@
     }
     scopeLast = { raw: raw, uid: uid }
     var out = raw.replace(/(<div[^>]*\bid=)["']vcp-root["']/i, '$1"' + uid + '"')
-    if (out.indexOf('#vcp-root') !== -1) {
-      out = out.replace(/(<style[^>]*>[\s\S]*?<\/style>)/gi, function (m) {
-        return m.replace(/#vcp-root/g, '#' + uid)
-      })
-    }
+    // 全文全局替换：正文里的 #vcp-root 字样也一并改（概率极低，无害），
+    // 关键是让「未闭合 <style>」里正在输出的选择器也随帧指向唯一 id。
+    out = out.replace(/#vcp-root/g, '#' + uid)
     return out
   }
 
@@ -227,13 +288,18 @@
       }
 
       if (tok.type === 'open' && RAWTEXT[tok.name]) {
-        // script/style 原始文本：完整闭合时整个块直接固化；
-        // 未闭合时「跳过该标签」继续扫描——绝不把其后内容归 tail，
-        // 否则文字里的 <style> 字样（反引号示例）会被误判为真标签并吞掉后续内容。
+        // script/style 原始文本：完整闭合时整个块直接固化。
+        // 未闭合（流式中正在输出）时：从开标签起归 tail，绝不「跳过继续扫描」——
+        //   style → parseFrag 补闭合渲染活样式（背景/字体随流式逐步生效）；
+        //   script → parseFrag 转 \u0000 截断丢弃（绝不把 JS 当元素渲染）。
+        // 文字里的伪 <style> 字样在非流式 fullRender 走 escapeUnclosedRawtext 转义
+        // 不受影响；流式中被误判归 tail 的最坏结果只是该帧多渲染一丁点样式，终帧自愈。
         var closeIdx = str.toLowerCase().indexOf('</' + tok.name, tok.end)
         if (closeIdx === -1) {
-          i = tok.end
-          continue
+          if (inContainer) { if (subStart === -1) out.innerTail = tok.start; return out }
+          if (stack.length === 0) { out.tailStart = tok.start; return out }
+          out.innerTail = tok.start
+          break
         }
         var ct = nextTag(str, closeIdx)
         var rawEnd = ct ? ct.end : str.length
@@ -319,20 +385,49 @@
       if (after.indexOf('</' + name.toLowerCase() + '>') === -1) {
         // 未闭合：tail 场景 → 截断（丢弃未闭合标签及其后内容，避免泄漏）；
         // 块场景 → 转义为文本（文字里的伪标签字样原样显示）。
+        // v6.19 例外：tail 中未闭合的 <style> 保留开标签——parseFrag 补闭合后
+        // 作为「活样式」随流式渲染，让背景/字体从第一帧起逐步生效（不再最后
+        // 一帧才闪现）；未闭合的 script 仍截断（绝不把 JS 当元素渲染）。
+        if (isTail && name.toLowerCase() === 'style') return m
         return isTail ? '\u0000' : '&lt;' + m.slice(1)
       }
       return m
     })
   }
 
+  // 平衡花括号：流式期间 <style> 内容「{」已开、「}」未写时，补足「}」让已写出的
+  // 声明形成完整规则块、立即生效（否则浏览器丢弃不完整规则块，背景仍最后才闪现）。
+  function closeBraces(css) {
+    var depth = 0
+    for (var i = 0; i < css.length; i++) {
+      var ch = css.charCodeAt(i)
+      if (ch === 123) depth++                          // {
+      else if (ch === 125) { if (depth > 0) depth-- }  // }
+    }
+    var out = css
+    while (depth-- > 0) out += '}'
+    return out
+  }
+
   function parseFrag(html, isTail) {
     if (!html) return null
     html = escapeUnclosedRawtext(html, isTail)
     if (isTail) {
-      // 流式 tail：丢弃未闭合的 style/script 及其后所有内容（正在输出，暂不渲染）
+      // 流式 tail：未闭合的 <style> 补闭合 + 平衡花括号——CSS 规则块（#id{...}）
+      // 在流式中「{」已开「}」未写时被浏览器整体丢弃，背景/字体仍要等整块写完才
+      // 一次性出现；补足「}」让已写出的声明立即生效，背景随流式逐步长出。
+      var sm = /<style([^>]*)>/i.exec(html)
+      if (sm && !/<\/style>/i.test(html)) {
+        var before = html.slice(0, sm.index)
+        var css = html.slice(sm.index + sm[0].length)
+        html = before + sm[0] + closeBraces(css) + '</style>'
+      }
       var cut = html.indexOf('\u0000')
       if (cut !== -1) html = html.slice(0, cut)
     }
+    // 文字声明优先级提升：给已闭合 <style> 内的 font-family/color 等加 !important
+    // （流式 tail 补闭合后同样走到这里 → 流式期间字体亦获最高优先级）。
+    html = boostStyle(html)
     // 防认领：给「闭合的 <style>」打 data-plugin 标记——DSH 插件系统会
     // 把页面里「未标记的 style」认领（claimStyles）并在插件热更新时移除
     // （removeOwnedStyles）；用永不冲突的假 id 标记消息自己的 style，避免被误删。
@@ -349,7 +444,9 @@
     var b = doc.body
     for (var j = 0; j < b.childNodes.length; j++) o.push(__vcpVc(b.childNodes[j], o.length))
     if (!o.length) return null
-    return o.length === 1 ? o[0] : f.jsx(f.Fragment, { children: o })
+    var res = o.length === 1 ? o[0] : f.jsx(f.Fragment, { children: o })
+    guardChildren(res) // v6.23：子容器布局防崩递归兜底（新增块粒度，微秒级）
+    return res
   }
 
   // 解析容器开标签 → { tag, props }（复用 vc 的安全过滤，不含 children）
@@ -388,6 +485,181 @@
       }
       return { tag: el.localName, props: props }
     } catch (e) { return null }
+  }
+
+  // ---- 根容器布局防崩兜底（v6.22）：自愈层 · 结构永不崩 ----
+  // 不管 AI 怎么写，以下结构属性缺失时自动补默认（不覆盖显式意图）：
+  //   box-sizing:border-box    → width:100% + padding 不再出框
+  //   max-width:100%           → 卡片不超出消息容器
+  //   overflow-wrap:break-word → 长 URL / 长英文词不撑破版面
+  //   font-family              → 缺省字体时用系统无衬线链（防裸奔默认字体）
+  // 纯属性操作，每帧微秒级、零 token 消耗；与渲染器既有的 img 收敛 /
+  // 文字 important / 花括号平衡同属「自愈层」，审美仍由 AI 决定、结构由程序兜底。
+  function applyRootGuard(props) {
+    var id = props.id || ''
+    if (!/^vcp-(msg-)?\d+$/.test(id)) return
+    var st = props.style || (props.style = {})
+    if (!st.boxSizing) st.boxSizing = 'border-box'
+    if (!st.maxWidth) st.maxWidth = '100%'
+    if (!st.overflowWrap) st.overflowWrap = 'break-word'
+    if (!st.fontFamily) st.fontFamily = "ui-sans-serif,system-ui,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif"
+  }
+
+  // ---- 子容器布局防崩（v6.23）：递归补 box-sizing + 表格/代码块溢出防护 ----
+  // 递归遍历新增块 vdom，只对「块级/容器标签 + 设了宽类样式」的元素补
+  // box-sizing:border-box（width:100% + padding 不再出框）；table 块级化 +
+  // 横向滚动（防表格撑破版面）；pre 代码块限宽 + 横向滚动（防长代码撑破）。
+  // 缺失才补、不覆盖显式意图；只作用于新增块，每帧微秒级。
+  var GUARD_TAGS = { div:1, section:1, article:1, header:1, footer:1, main:1, aside:1, nav:1, ul:1, ol:1, li:1, table:1, tr:1, td:1, th:1, form:1, figure:1, figcaption:1, blockquote:1, pre:1, p:1 }
+  // SVG 自愈（v6.24）：svg 根限宽等比（防超大图撑破版面）；带 transform 动画的
+  // SVG 元素补 transform-box:fill-box + transform-origin:center——缺 fill-box 时
+  // transform-origin 按 viewport 原点计算，旋转/缩放错位甚至不可见（最常见故障）。
+  var SVG_TAGS = { svg:1, rect:1, circle:1, path:1, g:1, line:1, polygon:1, polyline:1, ellipse:1, text:1, defs:1, use:1, filter:1, mask:1, linearGradient:1, radialGradient:1, stop:1, clipPath:1, animate:1, animateTransform:1, animateMotion:1 }
+  function guardChildren(node) {
+    if (!node || typeof node !== 'object') return
+    var props = node.props
+    if (!props) return
+    var tag = node.tag || (typeof node.type === 'string' ? node.type : '')
+    var st = props.style
+    if (SVG_TAGS[tag]) {
+      // svg 根即使无 style 也补：块级化 + 限宽——svg 默认 inline，inline 替换元素
+      // 的宽度计算有浏览器差异（width 属性与 viewBox 比例不一致时内容会整体偏右/出框）；
+      // display:block 让宽度确定收敛为容器宽，viewBox 内容 meet 居中。不动 height
+      // （保留 AI 的 height 属性，消除 height:auto 的浏览器差异）。
+      if (tag === 'svg') {
+        if (!st) st = props.style = {}
+        if (!st.display) st.display = 'block'
+        if (!st.maxWidth) st.maxWidth = '100%'
+      }
+      // 带 transform 动画的元素补 fill-box（无动画不创建空 style）
+      if (st && (st.animation || st.transform) && !st.transformBox) {
+        st.transformBox = 'fill-box'
+        if (!st.transformOrigin) st.transformOrigin = 'center'
+      }
+    }
+    if (GUARD_TAGS[tag]) {
+      if (tag === 'table') {
+        // 表格防撑破组合拳（v6.29）：display:block 块级化 + width:100% 强制表格宽
+        // = 容器宽（不再由内容决定）+ max-width 上限 + overflow-x 滚动。
+        // 只加 display:block/overflow 不够——nowrap 单元格会把表格布局撑宽溢出。
+        if (!st) st = props.style = {}
+        if (!st.display) st.display = 'block'
+        if (!st.width) st.width = '100%'
+        if (!st.maxWidth) st.maxWidth = '100%'
+        if (!st.overflowX) st.overflowX = 'auto'
+      } else if (tag === 'pre') {
+        // pre 即使无内联 style 也补溢出防护（嵌套深卡无样式代码块同样兜住）
+        if (!st) st = props.style = {}
+        if (!st.overflowX) st.overflowX = 'auto'
+        if (!st.maxWidth) st.maxWidth = '100%'
+      } else if (st && (tag === 'td' || tag === 'th') && (st.whiteSpace === 'nowrap' || st.whiteSpace === 'pre')) {
+        // nowrap/pre 单元格：内容裁剪防画出表格（配合表格滚动查看）
+        if (!st.overflow) st.overflow = 'hidden'
+      } else if (st && !st.boxSizing && (st.width || st.minWidth || st.maxWidth || st.display)) {
+        // 其余设宽容器：缺失才补 box-sizing（无 style 或无宽不干预）
+        st.boxSizing = 'border-box'
+      }
+    }
+    var ch = node.children || props.children
+    if (Array.isArray(ch)) { for (var i = 0; i < ch.length; i++) guardChildren(ch[i]) }
+    else if (ch && typeof ch === 'object') guardChildren(ch)
+  }
+
+  // ---- 文字对比度自愈（v6.32）：大背景 → code 背景 → code 字 三级阶梯 ----
+  // 模型（先生定）：大背景深 → code 背景浅 → code 字深；大背景浅 → code 背景深 →
+  // code 字浅——每级与相邻级保持对比。只修正 code 内的字色（大背景中无 code 的
+  // 文字不动）；AI 写对的不干预。
+  // 半透明的坑：code 背景半透明时，实际视觉色 = 与底层大背景叠加后的颜色，不能
+  // 按 code 自身 rgb 或大背景直接判断——向上找最近不透明祖先，alpha 混合算实际色，
+  // 再按实际色亮度决定字色（否则半透明 code + 深字在深底上会看不清）。
+  function cssChannel(v) {
+    var c = v / 255
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+  }
+  function cssLuminance(cssColor) {
+    var m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(cssColor || '')
+    if (!m) return 1
+    return 0.2126 * cssChannel(+m[1]) + 0.7152 * cssChannel(+m[2]) + 0.0722 * cssChannel(+m[3])
+  }
+  function rgbLuminance(rgb) {
+    if (!rgb) return 1
+    return 0.2126 * cssChannel(rgb[0]) + 0.7152 * cssChannel(rgb[1]) + 0.0722 * cssChannel(rgb[2])
+  }
+  // 解析 css 颜色字符串 → {rgb:[r,g,b], alpha}；解析失败返回 null
+  function parseColor(cssColor) {
+    var m = /rgba?\(([^)]*)\)/.exec(cssColor || '')
+    if (!m) return null
+    var parts = m[1].split(',').map(function (s) { return parseFloat(s.trim()) })
+    if (parts.length < 3) return null
+    return { rgb: [parts[0], parts[1], parts[2]], alpha: parts.length > 3 && !isNaN(parts[3]) ? parts[3] : 1 }
+  }
+  // 向上找最近的不透明背景色（祖先链），返回 [r,g,b] 或 null
+  function nearestOpaqueBg(el) {
+    var n = el.parentElement
+    while (n && n.nodeType === 1) {
+      var pc = parseColor(window.getComputedStyle(n).backgroundColor)
+      if (pc && pc.alpha >= 1) return pc.rgb
+      n = n.parentElement
+    }
+    return null
+  }
+  function fixCodeContrast(root) {
+    if (!root || !root.querySelectorAll || typeof window === 'undefined' || !window.getComputedStyle) return
+    var codes = root.querySelectorAll('code')
+    for (var i = 0; i < codes.length; i++) {
+      var el = codes[i]
+      try {
+        var cs = window.getComputedStyle(el)
+        var color = cs.color
+        var bgP = parseColor(cs.backgroundColor)
+        if (!bgP) continue
+        if (bgP.alpha === 0) continue // 全透明：字继承大背景文字色，不干预
+        // 实际背景色：半透明时与最近不透明祖先叠加（alpha 混合）
+        var eff = bgP.rgb
+        if (bgP.alpha < 1) {
+          var anc = nearestOpaqueBg(el)
+          if (anc) {
+            var a = bgP.alpha
+            eff = [
+              Math.round(anc[0] * (1 - a) + bgP.rgb[0] * a),
+              Math.round(anc[1] * (1 - a) + bgP.rgb[1] * a),
+              Math.round(anc[2] * (1 - a) + bgP.rgb[2] * a)
+            ]
+          }
+        }
+        var colorLum = cssLuminance(color)
+        var effLum = rgbLuminance(eff)
+        var hi = Math.max(colorLum, effLum) + 0.05
+        var lo = Math.min(colorLum, effLum) + 0.05
+        if (hi / lo < 2.6) {
+          // 保留背景（AI 想要的凸显块），只把字色改成与实际背景强对比的深/浅色
+          el.style.setProperty('color', effLum > 0.5 ? '#111111' : '#f5f4f0', 'important')
+        }
+      } catch (e) { /* 单个 code 修正失败不影响其余 */ }
+    }
+  }
+
+  // ---- 根容器背景兜底（v6.23）：确认无背景才补浅纸底 ----
+  // 流式停顿后执行一次：仅当【内联无 background】且【容器内 <style> 也无 background
+  // 声明】时才补默认浅纸底——绝不覆盖 AI 意图（style 里写了背景就不动）。
+  // 幂等：dataset 标记防重复。
+  function finalizeRoot(el) {
+    if (!el || el.nodeType !== 1 || !el.style || !el.dataset) return
+    if (el.dataset.vcpBgDone === 'true') return
+    el.dataset.vcpBgDone = 'true'
+    try {
+      if (!(el.style.background || el.style.backgroundColor)) {
+        var styles = el.querySelectorAll('style')
+        var hasBg = false
+        for (var i = 0; i < styles.length; i++) {
+          // 只认「根容器规则块内的 background」（#vcp-msg-N{...background...}），
+          // 子元素有背景不算——根容器缺背景仍补浅纸底。
+          if (/#vcp-(?:msg-)?\d+\s*\{[^}]*background/i.test(styles[i].textContent || '')) { hasBg = true; break }
+        }
+        if (!hasBg) el.style.setProperty('background', '#F5F4F0')
+      }
+      fixCodeContrast(el) // v6.26：code 对比度自愈（主题插件白背景 → 透明+继承）
+    } catch (e) { /* 兜底失败不影响 */ }
   }
 
   function commit(blocks, list) {
@@ -432,7 +704,7 @@
   }
   function render(raw, streaming) {
     var t0 = typeof performance !== 'undefined' && performance.now ? performance.now() : 0
-    var v = sanitizeStyle(imgConvert(scopeVcp(raw || '')))
+    var v = sanitizeStyle(constrainImg(imgConvert(scopeVcp(raw || ''))))
     if (streaming) v = mathPlaceholder(v, true)
     v = mermaidBlockConvert(v)
     if (!v) return null
@@ -470,6 +742,7 @@
         F.openRaw = r.open.raw
         F.open.tag = o.tag
         F.open.props = o.props
+        applyRootGuard(o.props) // v6.22：根容器布局防崩兜底（缺失才补）
         commit(r.inner, F.inner)
         tailFrom = r.open.end
       } else {
@@ -984,8 +1257,9 @@
   function scheduleMath() {
     if (mathTimer) clearTimeout(mathTimer)
     mathTimer = setTimeout(function () {
-      if (lastMathEl && lastMathEl.isConnected !== false && window.__vcpMath) {
-        window.__vcpMath.processMath(lastMathEl)
+      if (lastMathEl && lastMathEl.isConnected !== false) {
+        if (window.__vcpMath) window.__vcpMath.processMath(lastMathEl)
+        finalizeRoot(lastMathEl) // v6.23：根容器背景兜底（确认无背景才补浅纸底）
       }
       followStop()
     }, MATH_DEBOUNCE_MS)
@@ -1114,6 +1388,7 @@
       el = el.props.children[0]
     }
     if (!el || typeof el !== 'object' || !el.props) return
+    applyRootGuard(el.props) // v6.22：非流式/兜底路径同样应用结构防崩（缺失才补）
     var ch = chromeForProps(el.props)
     if (!ch) return
     try { el.props.style = Object.assign({}, el.props.style, ch.vars, ch.base) } catch (e) { /* 注入失败不影响 */ }
@@ -1191,6 +1466,9 @@
                 lastMathEl = el
               } else {
                 window.__vcpMath.processMath(el)
+                // v6.26：非流式（历史消息/终帧）同样执行根容器兜底 + code 对比度
+                // 自愈——否则刷新页面后历史消息永远不触发 finalizeRoot，白底浅字依旧。
+                finalizeRoot(el)
               }
             }
           }

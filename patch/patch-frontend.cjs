@@ -127,6 +127,17 @@ const CONTENT_RE_AFTER = String.raw`replace(/(?<![\w-])content\s*:[^;]*;?/gi,"")
 const STYLE_REF_BEFORE = String.raw`s.style=hp(sv);continue}`
 const STYLE_REF_AFTER = String.raw`s.style=hp(sv);s.ref=function(el){if(el)for(const d of sv.split(";")){const j=d.indexOf(":");if(j===-1)continue;const p=d.slice(0,j).trim(),v=d.slice(j+1).trim();if(v&&/^(color|font-family|font-size|font-weight|font-style|line-height|letter-spacing|text-align|text-shadow)$/.test(p))el.style.setProperty(p,v,"important")}};continue}`
 
+// ---- 锚点 E：代码围栏兜底（v6.30 → v6.32 升级）---------------------------
+// Ox Alpha 实测：协议只说「直接输出 HTML」未禁止围栏，模型把卡片包在
+// ```html ... ``` 里 → markdown 解析为 code 节点 → 显示源码。
+// 兜底：代码块内容以 <div id="vcp-root" 开头 → 直接调 vcp render（围栏剥离、
+// 裸 HTML 渲染），符合「HTML 即渲染」语义；判定保守，普通代码示例不受影响。
+// v6.32 修复：围栏兜底必须带渲染开关检查（localStorage['dsh.rawHtml']==='1'），
+// 否则关闭渲染插件后围栏 HTML 仍被强制渲染成卡片（先生实测发现）。
+const CODE_CASE_RAW = String.raw`case"code":return wp(n,r,i);`
+const CODE_CASE_V1 = String.raw`case"code":{try{const _v=(n.value||"").trim();if(/^<div\s+id=["']vcp-root["']/i.test(_v)){const _r=window.__vcpStable&&window.__vcpStable.render(n.value,i.streaming);if(_r!==null&&_r!==undefined)return _r}}catch(_e){}return wp(n,r,i)}`
+const CODE_CASE_V2 = String.raw`case"code":{try{const _v=(n.value||"").trim();if(typeof localStorage!=="undefined"&&localStorage.getItem("dsh.rawHtml")==="1"&&/^<div\s+id=["']vcp-root["']/i.test(_v)){const _r=window.__vcpStable&&window.__vcpStable.render(n.value,i.streaming);if(_r!==null&&_r!==undefined)return _r}}catch(_e){}return wp(n,r,i)}`
+
 // ---- 锚点 C：vc() 定义前注入 v6 稳定区模块 ----
 // 模块源码来自同目录 v6-inject.js（无 import/export，依赖闭包 vc/hp/f 与全局 window/DOMParser）。
 // BEFORE 用「hp 函数结束 + vc 函数开始」的拼接锚点，保证唯一且幂等（注入后不再命中）。
@@ -170,6 +181,18 @@ let v6Handled = false
   }
 }
 
+// ---- 围栏兜底升级状态机（v6.32）：旧版（无开关检查）→ 新版（带开关检查）----
+// 旧版 bug：关闭渲染插件后围栏 HTML 仍被强制渲染成卡片（先生实测发现）。
+let codeCaseHandled = false
+if (t.indexOf(CODE_CASE_V1) !== -1) {
+  t = t.replace(CODE_CASE_V1, CODE_CASE_V2)
+  codeCaseHandled = true
+  console.log('[patch] 围栏兜底升级：补渲染开关检查（v6.32）')
+} else if (t.indexOf(CODE_CASE_V2) !== -1) {
+  codeCaseHandled = true
+  console.log('[patch] 围栏兜底已是最新版（带开关检查），跳过')
+}
+
 /**
  * 替换表：label / from（必须唯一命中）/ to。
  * v6 补丁 = 锚点 C（注入稳定区模块）+ 锚点 A（case"html" 改调 render）。
@@ -182,6 +205,13 @@ if (!v6Handled) {
     label: 'C.注入 v6 稳定区模块（vc 定义前）',
     from: VC_DEF_BEFORE,
     to: VC_DEF_AFTER,
+  })
+}
+if (!codeCaseHandled) {
+  REPLACEMENTS.push({
+    label: 'E.case"code" 围栏兜底（v6.30：html 代码块 → vcp render）',
+    from: CODE_CASE_RAW,
+    to: CODE_CASE_V2,
   })
 }
 REPLACEMENTS.push(

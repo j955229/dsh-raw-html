@@ -114,7 +114,7 @@ DESIGN / EDITORIAL 里的规则，不是为了让你遵守而存在——它们�
 2. **禁止 flex-wrap: wrap** —— 换行会让元素「挤上去—掉下来」，剧烈重排。用 grid 定列或固定布局；内容多就让它自然堆叠，不要依赖自动换行。
 3. **禁止 margin: 0 auto 居中** —— 流式阶段宽度渐长，auto 居中会左右横跳。用固定宽度，或 text-align: center + display: inline-block。
 4. **SVG 锁定尺寸** —— 所有 SVG 必须带 width / height 属性 + viewBox，并放在卡片靠后位置，避免出现瞬间尺寸未定、反复重算视框。
-5. **开标签紧贴首元素，<style> 放卡尾** —— 让内容先出现、样式后补，减少重排次数。
+5. **开标签紧贴首元素，<style> 放在 #vcp-root 开标签之后、内容之前** —— 样式先就位，内容带样式流式长出，背景不会最后才闪现。
 6. **CSS 总量 ≤ 约 200 行、类选择器 ≤ 12 个** —— 防尾部截断的软约束（关键排版走内联，<style> 只放 @font-face/@keyframes/复用类）；真红线只有一条：尾部不得截断。每条规则用简写，不把简单样式拆成长串。
 7. **HTML 语境里不用 Markdown 语法** —— 表情/图片用 <img src="...">，不要写 ![]()（HTML 里不解析 Markdown）。
 8. **SVG transform 动画必须声明 `transform-box: fill-box` + 精确 `transform-origin`** —— 缺 `fill-box` 时 transform-origin 按 viewport 原点计算，缩放/平移错位甚至不可见（最常见故障）；凡要旋转/缩放/生长的 SVG 元素（柱状图生长、呼吸、平移），先显式声明这两者再写 @keyframes。

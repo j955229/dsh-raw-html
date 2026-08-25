@@ -2,7 +2,22 @@
 
 本文件记录插件版本（`package.json` 的 `version`）与补丁代号（`patch/*` 注入模块）两条线的演进。
 
-## 0.3.0（当前）
+## 0.4.0（当前）
+
+> 补丁子版本：**v7.0**（自 v6.18 的一次大迭代 · 渲染器「自愈层」体系建立；v6.19~v6.32 逐级迭代已归纳为本版本）。
+
+- **进化·渲染器自愈层体系（蓝汐 · 2026-08-25 · 先生实测驱动）**：从 v6.19 到 v6.32 的逐级迭代归纳为 v7.0，全部由先生实测反馈驱动（晨报卡 → 垃圾代码卡 → 嵌套卡 → SVG 动画卡 → 混沌嵌套卡）：
+  - **流式样式即时生效**：未闭合 `<style>` 补闭合渲染 + `closeBraces` 花括号平衡 + style 前置规范（背景/字体随流式逐步长出，不再最后才闪现）
+  - **消息作用域化 + 文字优先级**：`#vcp-root` → `#vcp-msg-N` 全文替换（未闭合 style 内选择器随帧指向唯一 id）+ 文字声明自动 `!important`（抗字体/主题插件覆盖）
+  - **资源收敛**：`constrainImg` img max-width:100%（流式大图不撑版）· svg 块级化限宽（display:block + max-width，width 与 viewBox 比例不一致不再偏右出框）· transform 动画自动补 `transform-box:fill-box`
+  - **自愈层全树覆盖**：根/子容器 box-sizing 自动补 · table/pre 溢出防护 · 表格防撑破组合拳（width:100% + nowrap 单元格 overflow:hidden）· 缺背景补纸色底 · 半透明背景 alpha 叠加判定
+  - **code 对比度三级阶梯模型**：大背景→code 背景→code 字逐级对比，只改 code 内字色、保留凸显块，半透明 code 按与底层叠加后的实际色判定
+  - **代码围栏兜底**：AI 把卡片包进 ```` ```html ```` 时自动剥离围栏渲染（带渲染开关检查，关闭插件显示源码）
+  - **协议铁律新增**：box-sizing 铁律（设宽容器必写 border-box）· 严禁代码围栏 · 代码内尖括号必须转义 · style 写在 root 开标签后
+  - **下载修复**：卡尾 `<style>` 兄弟纳入下载（`collectSiblingStyles`，按 #vcp-msg-N id 匹配）
+  - 验证：tests/stable.test.mjs 51 项断言全过 · 全量 node --check · dist 重打健康检查通过
+
+## 0.3.0
 
 > 补丁子版本：**v6.18**（v6.16 流式公式占位 → v6.17 声明式配色桥接 + 流式锚定锁 + ref 闭包缓存 + SVG transform-box 条款 → v6.18 新版前端 rc.8+ 锚点组 + `__vcpVc/__vcpHp` 宿主别名 + 零静态依赖）。
 
