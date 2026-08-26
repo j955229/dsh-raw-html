@@ -20,3 +20,12 @@ release/
 .DS_Store
 Thumbs.db
 .write_test
+
+# 测试临时产物
+tests/tmp-*
+
+# 市场投稿文件（提交给 awesome-dsh-plugin 的 YAML，不属于本仓库）
+marketplace-submission/
+
+# 日志
+*.log

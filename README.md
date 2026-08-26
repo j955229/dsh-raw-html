@@ -18,7 +18,11 @@
 ![效果图 4](docs/images/banner-4.jpg)
 ![效果图 5](docs/images/banner-5.jpg)
 
-## 📣 本次更新（v0.3.0 · 补丁 v6.18）
+## 📣 近期更新（v0.6.0 · 补丁 v6.38）
+
+- **自愈层 v6.37/v6.38（2026-08-29）**：卡片渲染撕裂根治——CommonMark 块级标签不能打断段落（文字+换行+`<div>` 撕裂）与卡片内部空行拆分问题，`fixVcpBlank` 补空行/压缩空行，整卡回归单一 htmlFlow（稳定测试 105 断言全绿）。
+- **消息主体渲染器 VCP 接管（2026-08-29）**：主 markdown 渲染器接入 VCP 渲染，消息卡片从此真正渲染为界面（此前官方策略是当源码文本显示）。
+- 早期更新（v0.3.0 · 2026-08-24）：
 
 - **修复（2026-08-24）**：适配新版前端 **0.1.0-rc.8 / 0.1.1-rc.x**（压缩器改名 Xu/jd 的新锚点组，自动探测、旧版兼容）；消除 schemastery 静态依赖导致的启动「模块找不到」故障（动态加载 + 降级，缺依赖也能正常启动）。
 - **新能力（2026-08-24）**：声明式配色 `data-vcp-preset`（内置 VCPColorEngine 确定性生成整套色板，对比度/色域闭环保证）；流式锚定锁 + ref 闭包缓存（流式更稳不抖）。
@@ -31,8 +35,8 @@
 
 ## 版本
 
-- **插件版本**：`package.json` 的 `version`（当前 **0.3.0**），随 `dsh plugin` 升级。
-- **补丁代号**：`patch/` 注入模块的演进代号（当前 **v6 · 子版本 v6.18**），由 `install-v6.cjs` 应用到前端 bundle，二者独立演进。前端兼容 **0.0.1-rc.5 ~ 0.1.0-rc.7** 与 **0.1.0-rc.8 / 0.1.1-rc.x** 两代压缩形态（vc/hp 与 Xu/jd 自动探测适配）。
+- **插件版本**：`package.json` 的 `version`（当前 **0.6.0**），随 `dsh plugin` 升级。
+- **补丁代号**：`patch/` 注入模块的演进代号（当前 **v6 · 子版本 v6.38**），由 `install-v6.cjs` 应用到前端 bundle，二者独立演进。前端兼容 **0.0.1-rc.5 ~ 0.1.0-rc.7** 与 **0.1.0-rc.8 / 0.1.1-rc.x** 两代压缩形态（vc/hp 与 Xu/jd 自动探测适配）。
 - 详细变更见 [CHANGELOG.md](./CHANGELOG.md)。
 
 ## 组成
@@ -88,7 +92,7 @@ node "...\patch\install-v6.cjs" "C:\...\dsh-web-frontend\dist\assets\index-*.js"
 
 > 历史脚本（v1/v2 时代）`patch/install.cjs`、`patch/patch-frontend.cjs`、`patch/upgrade-patch.cjs` 仍保留在源仓库供参考，日常安装请使用 `install-v6.cjs`。
 
-## vcp-fast 加速引擎（v0.3.0）
+## vcp-fast 加速引擎
 
 在 v1 渲染补丁基础上新增的「缓存 + 增量」双引擎（`window.__vcpFast`）：
 
