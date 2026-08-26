@@ -983,6 +983,19 @@
       return '<pre' + attrs + '>' + out + '</pre>'
     })
   }
+  // v6.37 卡片前空行修复（先生 · 2026-08-29 · 「提交数 ≥ 10」卡实测）：
+  // CommonMark type 6 规则：<div> 等块级标签【不能打断段落】——消息若以
+  // 「文字前言 + 换行 + <div id="vcp-root">」（中间无空行）输出，mdast 会把
+  // <div> 开标签当【段落内联 HTML】，后续 <div class="paper"> 等全部脱离
+  // vcp-root 变成兄弟节点 → 根容器背景生效（#vcp-root 规则仍命中）但子选择器
+  // （.paper/.q/.cmp…）全部失效 → 先生实测「最外围框住、内部格式全掉」。
+  // 修复：md 解析前把「非换行字符 + 换行 + <div id="vcp-root"」之间的换行
+  // 补成空行（文字段落结束、卡片 htmlFlow 从新块开始）；幂等（重复应用不叠加）、
+  // 无 div 不动、消息以 <div> 开头不动。由 bundle 的 bc 组件在解析前调用。
+  function fixVcpBlank(text) {
+    if (!text || text.indexOf('<div id="vcp-root"') === -1) return text
+    return text.replace(/([^\n])\n(?= *<div id="vcp-root")/g, '$1\n\n')
+  }
   function render(raw, streaming) {
     var t0 = typeof performance !== 'undefined' && performance.now ? performance.now() : 0
     var v = sanitizeStyle(constrainImg(imgConvert(scopeVcp(raw || ''))))
@@ -1789,6 +1802,6 @@
     chromeForProps: chromeForProps
   }
 
-  window.__vcpStable = { render: render, _test: { collectTextSelectors: collectTextSelectors, enforceFontChain: enforceFontChain, healSvgAnimation: healSvgAnimation } }
+  window.__vcpStable = { render: render, fixBlank: fixVcpBlank, _test: { collectTextSelectors: collectTextSelectors, enforceFontChain: enforceFontChain, healSvgAnimation: healSvgAnimation } }
 })()
 /*__DSH_V6_INJECT_END__*/

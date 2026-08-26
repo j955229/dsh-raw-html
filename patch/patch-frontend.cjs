@@ -149,6 +149,17 @@ const CODE_CASE_V2 = String.raw`case"code":{try{const _v=(n.value||"").trim();if
 // 白名单（vcp-root 开头）仍保留防误伤普通代码块，显式关闭（"0"）才不接管。
 const CODE_CASE_V3 = String.raw`case"code":{try{const _v=(n.value||"").trim();if(typeof localStorage!=="undefined"&&localStorage.getItem("dsh.rawHtml")!=="0"&&/^<div\s+id=["']vcp-root["']/i.test(_v)){const _r=window.__vcpStable&&window.__vcpStable.render(n.value,i.streaming);if(_r!==null&&_r!==undefined)return _r}}catch(_e){if(typeof console!=="undefined")console.warn("[vcp] code 围栏渲染异常，已回退代码块",_e)}return wp(n,r,i)}`
 
+// ---- 锚点 F：bc（markdown 组件）解析前做卡片空行修复（v6.37 · 先生 2026-08-29）----
+// CommonMark type 6 规则：<div> 等块级标签【不能打断段落】——消息以
+// 「文字前言 + 换行 + <div id="vcp-root">」（中间无空行）输出时，mdast 把
+// <div> 开标签当【段落内联 HTML】，后续 <div class="paper"> 等脱离 vcp-root
+// 变成兄弟节点 → 根容器背景生效但子选择器全失效（先生实测「最外围框住、
+// 内部格式全掉」）。修复：解析前调用注入块的 fixVcpBlank（window.__vcpStable
+// 挂载）把该换行补成空行，让卡片成为独立 htmlFlow；无 vcp-root 或已是空行
+// 时幂等不动。流式 Mp / 非流式 bp 共用同一 t。
+const BC_BEFORE = String.raw`const bc=R.memo(function({text:r,streaming:i=!1,codeLabels:s,fileMentions:u}){const c=R.useRef(null),h=R.useRef(s),p=R.useMemo(()=>i?((c.current===null||h.current!==s)&&(c.current=new Mp(s),h.current=s),c.current.render(r)):(c.current=null,bp(r,s,u)),[r,i,s,u]);return f.jsx("div",{className:S1.markdown,children:p})})`
+const BC_AFTER = String.raw`const bc=R.memo(function({text:r,streaming:i=!1,codeLabels:s,fileMentions:u}){const c=R.useRef(null),h=R.useRef(s),t=(window.__vcpStable&&window.__vcpStable.fixBlank?window.__vcpStable.fixBlank(r):r),p=R.useMemo(()=>i?((c.current===null||h.current!==s)&&(c.current=new Mp(s),h.current=s),c.current.render(t)):(c.current=null,bp(t,s,u)),[r,i,s,u]);return f.jsx("div",{className:S1.markdown,children:p})})`
+
 // ---- 锚点 C：vc() 定义前注入 v6 稳定区模块 ----
 // 模块源码来自同目录 v6-inject.js（无 import/export，依赖闭包 vc/hp/f 与全局 window/DOMParser）。
 // BEFORE 用「hp 函数结束 + vc 函数开始」的拼接锚点，保证唯一且幂等（注入后不再命中）。
@@ -264,6 +275,11 @@ if (!htmlCaseHandled) {
     to: CASE_HTML_V7_AFTER,
   })
 }
+REPLACEMENTS.push({
+  label: 'F.bc 卡片空行修复（v6.37：文字+换行+<div> 撕裂 → 补空行成独立 htmlFlow）',
+  from: BC_BEFORE,
+  to: BC_AFTER,
+})
 
 let changed = 0
 for (const r of REPLACEMENTS) {

@@ -835,4 +835,24 @@ console.log('== 19. 自愈层 v6.36：code 内容实体保护（裸 < 不当真�
   ok('&amp; 显示为 &', () => assert.ok(t3.includes('& 实体')))
 }
 
+// ---- 第 20 组：v6.37 卡片前空行修复（CommonMark type 6 不能打断段落）----
+console.log('== 20. 自愈层 v6.37：fixVcpBlank 卡片空行修复（文字+换行+<div> 撕裂）==')
+{
+  const s = resetCache()
+  const fix = s.fixBlank
+  ok('fixBlank 已挂载', () => assert.equal(typeof fix, 'function'))
+  const out1 = fix('先生，这是卡片：\n<div id="vcp-root" style="color:red">')
+  ok('文字+换行+<div> → 补空行（段落结束、卡片独立 htmlFlow）', () => assert.equal(out1, '先生，这是卡片：\n\n<div id="vcp-root" style="color:red">'))
+  ok('幂等：重复应用不叠加', () => assert.equal(fix(out1), out1))
+  const out2 = fix('纯文本没有 div')
+  ok('无 vcp-root 的文本不动', () => assert.equal(out2, '纯文本没有 div'))
+  const out3 = fix('<div id="vcp-root">直接开头')
+  ok('消息以 <div> 开头不动（已是块起始）', () => assert.equal(out3, '<div id="vcp-root">直接开头'))
+  const out4 = fix('前言\n\n<div id="vcp-root">已空行')
+  ok('已有空行不动（不重复补）', () => assert.equal(out4, '前言\n\n<div id="vcp-root">已空行'))
+  const out5 = fix('多行\n前言\n<div id="vcp-root">')
+  ok('多行前言只修 <div> 前一处', () => assert.equal(out5, '多行\n前言\n\n<div id="vcp-root">'))
+  ok('非字符串输入原样返回', () => assert.equal(fix(null), null))
+}
+
 console.log(`\n全部通过：${passed} 项断言 ✓`)
