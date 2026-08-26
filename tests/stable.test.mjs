@@ -557,4 +557,282 @@ console.log('== 14. 消息级作用域化：后卡样式不污染前卡（v6.12�
   })
 }
 
+console.log('== 15. 自愈层 v6.33：字体链继承兜底 + 圆角不兜底 ==')
+{
+  // 场景 1：有 <style> 的卡片（「登陆」显小原型）——兜底规则注入 <style> 末尾：
+  //   ① #vcp-msg-N{font-family:系统链 !important} 锁定根容器（v6.33b 关键：
+  //      applyRootGuard 补的 fontFamily 是普通内联无 important，皮肤仍能劫持根容器
+  //      本身，子元素 inherit 到的是被劫持字体 → 链断；CSS 锁定根容器补上这环）
+  //   ② 常用文字标签逐条 #vcp-msg-N tag{font-family:inherit !important}
+  // 卡片显式书法字体（.paper）boost 后 (1,1,0)!important 稳压兜底 (1,0,1)!important。
+  const s1 = resetCache()
+  const html = '<div id="vcp-root"><style>#vcp-root .paper{font-family:\'Lanxi-鱼尾行书\',serif}#vcp-root .hot{color:#F5572F}#vcp-root h2{font-size:21px}</style><p class="paper">蓝汐晚报</p><h2>台风在海南昌江沿海<span class="hot">登陆</span></h2></div>'
+  const r1 = s1.render(html, false)
+  const css1 = findTag(r1, 'style')[0].children.join('')
+  ok('有 <style> 卡：注入根容器字体链锁定规则', () => {
+    assert.match(css1, /#vcp-msg-\d+\{font-family:ui-sans-serif[^}]*!important\}/, '根容器字体链带 !important')
+  })
+  ok('注入常用文字标签逐条 inherit 兜底', () => {
+    assert.match(css1, /#vcp-msg-\d+ span\{font-family:inherit !important\}/, 'span 兜底存在')
+    assert.match(css1, /#vcp-msg-\d+ p\{font-family:inherit !important\}/, 'p 兜底存在')
+    assert.match(css1, /#vcp-msg-\d+ h2\{font-family:inherit !important\}/, 'h2 兜底存在')
+  })
+  ok('兜底规则带唯一 id 前缀（随消息作用域化）', () => {
+    const root = collect(r1).find(n => /^vcp-msg-\d+$/.test(n.props.id || ''))
+    assert.ok(css1.includes('#' + root.props.id + ' span'), '规则前缀是消息自己的 id')
+    assert.ok(!css1.includes('#vcp-root span'), '不含公共 #vcp-root 前缀')
+  })
+  ok('卡片显式书法字体不被兜底覆盖（.paper 规则保留）', () => {
+    assert.ok(css1.includes("font-family:'Lanxi-鱼尾行书',serif!important"), 'boost 后 .paper 字体声明保留')
+  })
+
+  // 场景 2：无 <style> 的纯内联卡——不注入（保持 DOM 结构纯净；
+  // 纯内联字体走 parseOpen ref 锁定，风险面小）
+  const s2 = resetCache()
+  const r2 = s2.render('<div id="vcp-root"><p style="color:red">纯内联卡</p></div>', false)
+  ok('无 <style> 卡：不注入 style 元素（结构纯净）', () => {
+    assert.equal(findTag(r2, 'style').length, 0, '无 style 元素')
+  })
+
+  // 场景 3：圆角不兜底（先生定调：border-radius 是装饰，AI 没写可能故意要直角，
+  // 强补圆角会误判意图；默认直角，尊重设计）+ 版面收窄兜底（v6.33e）
+  const s3 = resetCache()
+  const r3 = s3.render('<div id="vcp-root" style="background:#fff"><p>甲</p></div>', false)
+  ok('根容器缺圆角 → 不干预（默认直角）', () => {
+    const root = collect(r3).find(n => /^vcp-msg-\d+$/.test(n.props.id || ''))
+    assert.equal(root.props.style.borderRadius, undefined, '不补 borderRadius')
+  })
+  ok('v6.33e：根容器缺宽度 → 补 max-width:920px 版心', () => {
+    const root = collect(r3).find(n => /^vcp-msg-\d+$/.test(n.props.id || ''))
+    assert.equal(root.props.style.maxWidth, '920px', '收窄版心')
+  })
+  const s4 = resetCache()
+  const r4 = s4.render('<div id="vcp-root" style="background:#fff;border-radius:24px;max-width:100%"><p>乙</p></div>', false)
+  ok('AI 显式 border-radius:24px → 尊重保留', () => {
+    const root = collect(r4).find(n => /^vcp-msg-\d+$/.test(n.props.id || ''))
+    assert.equal(root.props.style.borderRadius, '24px')
+  })
+  ok('AI 显式 max-width:100% → 尊重（不补 920px）', () => {
+    const root = collect(r4).find(n => /^vcp-msg-\d+$/.test(n.props.id || ''))
+    assert.equal(root.props.style.maxWidth, '100%')
+  })
+  const s6 = resetCache()
+  const r6 = s6.render('<div id="vcp-root" style="background:#fff;width:100%"><p>丙</p></div>', false)
+  ok('AI 显式 width:100% → 尊重（不补 920px）', () => {
+    const root = collect(r6).find(n => /^vcp-msg-\d+$/.test(n.props.id || ''))
+    assert.equal(root.props.style.maxWidth, undefined, '不补 max-width')
+    assert.equal(root.props.style.width, '100%')
+  })
+
+  // 场景 4：流式路径——<style> 未闭合帧不注入（无 </style> 可挂），闭合帧注入
+  const s5 = resetCache()
+  const g1 = '<div id="vcp-root" style="background:#f5f4f0"><style>#vcp-root .t{font-size:20px}'
+  const g2 = g1 + '</style><p class="t">尾</p></div>'
+  const rg1 = s5.render(g1, true)
+  ok('流式：<style> 未闭合帧不注入兜底规则', () => {
+    const st = findTag(rg1, 'style')
+    if (st.length === 0) return // tail 补闭合的 style 可能以文本形态存在，不强断言
+    assert.ok(!st[0].children.join('').includes('font-family:inherit'), '未闭合帧不含兜底')
+  })
+  const rg2 = s5.render(g2, true)
+  ok('流式：<style> 闭合帧注入兜底规则', () => {
+    const st = findTag(rg2, 'style')
+    assert.ok(st.length >= 1, 'style 元素存在')
+    assert.ok(st[0].children.join('').includes('font-family:inherit'), '闭合帧含兜底规则')
+  })
+}
+
+console.log('== 16. 自愈层 v6.33c：字体链 DOM 强制（最终防线）==')
+{
+  const s = resetCache()
+  const stable = s
+  // 构造真实 DOM 卡片（jsdom）：卡片 <style> 显式 .paper 书法字体；
+  // 无显式字体的 p/span 应被强制 inherit（内联 !important，最高优先级）。
+  const div = document.createElement('div')
+  div.id = 'vcp-msg-1'
+  div.innerHTML = '<style>#vcp-msg-1 .paper{font-family:"Lanxi-鱼尾行书",serif}#vcp-msg-1 .t{font-size:19px;font-weight:800}#vcp-msg-1 .hot{color:#F5572F}</style><p class="t">文字<span class="hot">强调词</span></p><p class="paper">书法标题</p><p style="font-family:Georgia">内联字体</p>'
+  document.body.appendChild(div)
+  // 注意：geo 引用必须在 enforceFontChain 之前取得——强制后 .t 也会带 style 属性，
+  // 事后用 p[style] 会误选到 .t。
+  const geo = div.querySelector('p[style]')
+  stable._test.enforceFontChain(div)
+  ok('无显式字体的 span 被强制 inherit + important', () => {
+    const span = div.querySelector('span.hot')
+    assert.equal(span.style.fontFamily, 'inherit')
+    assert.equal(span.style.getPropertyPriority('font-family'), 'important')
+  })
+  ok('v6.33d：span 的 font-size 也被锁继承（皮肤字号压制根治）', () => {
+    const span = div.querySelector('span.hot')
+    assert.equal(span.style.fontSize, 'inherit', 'font-size 锁定 inherit')
+    assert.equal(span.style.getPropertyPriority('font-size'), 'important')
+    assert.equal(span.style.fontWeight, 'inherit', 'font-weight 锁定')
+    assert.equal(span.style.lineHeight, 'inherit', 'line-height 锁定')
+    assert.equal(span.style.letterSpacing, 'inherit', 'letter-spacing 锁定')
+  })
+  ok('v6.33d：color 不锁（AI 设计的 .hot 橙色保留）', () => {
+    const span = div.querySelector('span.hot')
+    assert.equal(span.style.color, '', 'color 无内联注入')
+  })
+  ok('无显式字体的 p 被强制 inherit + important', () => {
+    const p = div.querySelector('p.t')
+    assert.equal(p.style.fontFamily, 'inherit')
+    assert.equal(p.style.getPropertyPriority('font-family'), 'important')
+  })
+  ok('v6.33d：.t 自身 font-size 不被锁（类规则显式，boost 已保护 19px）', () => {
+    const p = div.querySelector('p.t')
+    assert.equal(p.style.fontSize, '', '.t 无内联 font-size 注入')
+  })
+  ok('显式字体类 .paper 不被强制（书法字体尊重）', () => {
+    const paper = div.querySelector('p.paper')
+    assert.equal(paper.style.fontFamily, '', '未注入内联字体')
+  })
+  ok('内联 font-family 元素不被强制（Georgia 保留）', () => {
+    assert.equal(geo.style.fontFamily, 'Georgia')
+  })
+  ok('根容器无显式字体 → 锁定系统链 important', () => {
+    assert.ok(div.style.fontFamily.indexOf('ui-sans-serif') === 0, '根容器系统链')
+    assert.equal(div.style.getPropertyPriority('font-family'), 'important')
+  })
+  ok('幂等：重复执行不重复处理（dataset 标记）', () => {
+    const span = div.querySelector('span.hot')
+    stable._test.enforceFontChain(div)
+    assert.equal(span.style.fontFamily, 'inherit', '值不变')
+  })
+  // AI 显式根容器内联字体 → 尊重（不锁定系统链）
+  const div2 = document.createElement('div')
+  div2.id = 'vcp-msg-2'
+  div2.style.fontFamily = "'Lanxi-鱼尾行书',serif"
+  div2.innerHTML = '<style>#vcp-msg-2 .t{font-size:15px}</style><p class="t">文字</p>'
+  document.body.appendChild(div2)
+  stable._test.enforceFontChain(div2)
+  ok('AI 显式根容器内联字体 → 尊重不覆盖', () => {
+    // 注意：jsdom 会把单引号字体名规范化为双引号（'X' → "X"），用 includes 判断
+    assert.ok(div2.style.fontFamily.includes('Lanxi'), '根容器保留 AI 字体')
+    assert.notEqual(div2.style.fontFamily.indexOf('ui-sans-serif'), 0, '未替换成系统链')
+  })
+  document.body.removeChild(div)
+  document.body.removeChild(div2)
+}
+
+console.log('== 17. 自愈层 v6.33f：花括号平衡全路径兜底（非流式 @keyframes 不被吞）==')
+{
+  // 卡 2 原型：<style> 已闭合但 .code 规则漏 }，后续 .dot 规则与 @keyframes 会被
+  // 浏览器吞进 .code 规则块 → 动画不转。v6.33f 对闭合 <style> 内的 CSS 补平衡。
+  const s = resetCache()
+  const html = '<div id="vcp-root" style="background:#0a0e1a"><style>#vcp-root .code{background:#fff;margin:8px 0 0;#vcp-root .dot{animation:spin 3s linear infinite;}@keyframes spin{to{transform:rotate(360deg)}}</style><div class="dot">x</div></div>'
+  const r = s.render(html, false)
+  const css = findTag(r, 'style')[0].children.join('')
+  ok('非流式：<style> 内花括号补平衡（{ 与 } 数量相等）', () => {
+    const open = (css.match(/\{/g) || []).length
+    const close = (css.match(/\}/g) || []).length
+    assert.equal(open, close, `开 ${open} / 闭 ${close}`)
+  })
+  ok('v6.33f：@keyframes spin 完整保留（不再被前块吞掉）', () => {
+    assert.ok(css.includes('@keyframes spin{to{transform:rotate(360deg)}}'), 'keyframes 独立完整')
+  })
+  ok('v6.33f：.dot 动画规则独立（不再被 .code 吞）', () => {
+    // 注：boost 只提升文字属性，animation 不追加 !important
+    assert.ok(css.includes('0 0;}#vcp-msg-1 .dot{animation:spin 3s linear infinite;}'), '.code 闭合后 .dot 独立成规则')
+  })
+  // 平衡的 CSS 不受影响（幂等）
+  const s2 = resetCache()
+  const html2 = '<div id="vcp-root" style="background:#fff"><style>#vcp-root .a{color:red}#vcp-root .b{font-size:12px}</style><p class="b">x</p></div>'
+  const r2 = s2.render(html2, false)
+  const css2 = findTag(r2, 'style')[0].children.join('')
+  ok('平衡 CSS 不被改动（幂等）', () => {
+    const open = (css2.match(/\{/g) || []).length
+    const close = (css2.match(/\}/g) || []).length
+    assert.equal(open, close)
+    assert.ok(!css2.includes('}{'), '无多余空规则')
+  })
+  // 嵌套 @media 正常 CSS 不被误伤（块类型栈：at 块内嵌套规则合法）
+  const s3 = resetCache()
+  const html3 = '<div id="vcp-root" style="background:#fff"><style>#vcp-root .x{font-size:12px}@media screen{#vcp-root .y{color:red}}</style><p class="x">x</p></div>'
+  const r3 = s3.render(html3, false)
+  const css3 = findTag(r3, 'style')[0].children.join('')
+  ok('@media 嵌套规则不被误伤（不补多余 }）', () => {
+    const open = (css3.match(/\{/g) || []).length
+    const close = (css3.match(/\}/g) || []).length
+    assert.equal(open, close, '花括号仍平衡')
+    assert.ok(css3.includes('@media screen{#vcp-msg-1 .y{color:red!important}}'), '@media 结构完整')
+  })
+}
+
+console.log('== 18. 自愈层 v6.34：SVG 类动画中心自愈（fill-box）==')
+{
+  const s = resetCache()
+  const div = document.createElement('div')
+  div.id = 'vcp-msg-1'
+  div.innerHTML = '<svg width="72" height="72" viewBox="0 0 72 72"><g class="dot"><circle cx="36" cy="36" r="26" fill="none" stroke="#40dcff" stroke-width="2"/><circle cx="58" cy="36" r="5" fill="#f5572f"/></g></svg>'
+  document.body.appendChild(div)
+  // jsdom 对 getComputedStyle().animationName 的支持有限：内联 animation 若可读则断言
+  const g = div.querySelector('g')
+  const hasAnimation = typeof domWindow.getComputedStyle === 'function'
+  // 手动给 g 加内联动画（jsdom 可解析 animationName 时走真实路径）
+  g.style.animation = 'spin 3s linear infinite'
+  stable._test.healSvgAnimation(div)
+  const cs = domWindow.getComputedStyle(g)
+  const animName = cs && cs.animationName
+  if (animName && animName !== 'none') {
+    ok('有动画的 SVG 元素补 fill-box + center（jsdom 支持时验证）', () => {
+      assert.equal(g.style.transformBox, 'fill-box')
+      assert.equal(g.style.transformOrigin, 'center')
+    })
+  } else {
+    ok('healSvgAnimation 对无动画识别环境不报错（jsdom 动画计算样式支持有限，跳过断言）', () => {
+      assert.ok(true)
+    })
+  }
+  ok('无动画 SVG 元素不被改动', () => {
+    const c = div.querySelector('circle')
+    assert.equal(c.style.transformBox, '')
+  })
+  ok('healSvgAnimation 幂等（重复执行不报错）', () => {
+    stable._test.healSvgAnimation(div)
+    assert.ok(true)
+  })
+  document.body.removeChild(div)
+}
+
+// ---- 第 19 组：v6.36 code 内容实体保护 ----
+function getText(node) {
+  if (typeof node === 'string' || typeof node === 'number') return String(node)
+  if (!node) return ''
+  const ch = node.children || (node.props && node.props.children)
+  if (Array.isArray(ch)) return ch.map(getText).join('')
+  if (ch && typeof ch === 'object') return getText(ch)
+  return ''
+}
+console.log('== 19. 自愈层 v6.36：code 内容实体保护（裸 < 不当真标签）==')
+{
+  const s = resetCache()
+  // AI 在 code 块里展示 HTML 代码：裸 <div（未转义）+ 已转义 &lt;div + span 高亮混排
+  const html = '<div id="vcp-root"><pre><code><span class="rd">case"code":</span>\n  if (rawHtml !== "0" &amp;&amp; /^<div\\s+id=["\']vcp-root["\']/i.test(_v))\n    return render(_v)\n  &lt;span class="cm"&gt;已转义样例&lt;/span&gt;</code></pre></div>'
+  const r = s.render(html, false)
+  ok('code 元素存在', () => assert.equal(findTag(r, 'code').length, 1))
+  ok('高亮 span 保留为真实元素（白名单）', () => assert.equal(findTag(r, 'span').length, 1))
+  ok('根容器之外无 div（裸 <div 未变成真标签）', () => assert.equal(findTag(r, 'div').length, 1))
+  const text = getText(findTag(r, 'code')[0])
+  ok('代码文本完整（含 span 高亮内容）', () => assert.ok(text.includes('case"code":')))
+  ok('普通代码行保留', () => assert.ok(text.includes('if (rawHtml !== "0"')))
+  ok('裸 <div 实体化后按文本显示', () => assert.ok(text.includes('<div')))
+  ok('已转义实体不再双重转义（显示为 <span> 文本）', () => assert.ok(text.includes('<span class="cm">已转义样例</span>')))
+}
+{
+  const s = resetCache()
+  const html2 = '<div id="vcp-root"><pre><code>plain &lt;div&gt; ok\nno-tag line</code></pre></div>'
+  const r2 = s.render(html2, false)
+  const t2 = getText(findTag(r2, 'code')[0])
+  ok('&lt;div&gt; 显示为 <div>（不双重转义）', () => assert.ok(t2.includes('<div> ok')))
+  ok('普通行不受影响', () => assert.ok(t2.includes('no-tag line')))
+}
+{
+  const s = resetCache()
+  const html3 = '<div id="vcp-root"><pre><code>&& 双与号 &amp;&amp; 实体</code></pre></div>'
+  const r3 = s.render(html3, false)
+  const t3 = getText(findTag(r3, 'code')[0])
+  ok('裸 & 原样保留（不误转义）', () => assert.ok(t3.includes('&& 双与号')))
+  ok('&amp; 显示为 &', () => assert.ok(t3.includes('& 实体')))
+}
+
 console.log(`\n全部通过：${passed} 项断言 ✓`)
