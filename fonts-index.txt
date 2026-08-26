@@ -1,4 +1,4 @@
-﻿bb1213\bb1213\叶根友特色简体升级版.ttf
+bb1213\bb1213\叶根友特色简体升级版.ttf
 BRLNSDB.TTF
 fzzj-ljdxkfont.ttf
 MSYH.TTF
@@ -217,3 +217,14 @@ simsun.ttf
 造字工房最全字体-2016-01-06更新\艺术字体\MFYaYuan_Noncommercial-Regular.ttf
 造字工房最全字体-2016-01-06更新\艺术字体\MFYingHua_Noncommercial-Regular.ttf
 造字工房最全字体-2016-01-06更新\艺术字体\MFYueYuan_Noncommercial-Regular.ttf
+# 2026-08-28 新增（先生下载 · Aa/字魂/鱼尾/自由浪漫 等 10 款）
+新增-2026-08-28\Aa今日花青-春兰茅坤.ttf
+新增-2026-08-28\Aa狂派手书.ttf
+新增-2026-08-28\Aa狂侠体.ttf
+新增-2026-08-28\依山北篆体.ttf
+新增-2026-08-28\字魂游龙篆书(商用需授权).ttf
+新增-2026-08-28\我会把你叫做爱情.ttf
+新增-2026-08-28\自由浪漫体.ttf
+新增-2026-08-28\香蕉修正带灵感体.ttf
+新增-2026-08-28\鱼尾书法行书-简体.ttf
+新增-2026-08-28\鱼尾书法行书-繁体.ttf
