@@ -992,9 +992,21 @@
   // 修复：md 解析前把「非换行字符 + 换行 + <div id="vcp-root"」之间的换行
   // 补成空行（文字段落结束、卡片 htmlFlow 从新块开始）；幂等（重复应用不叠加）、
   // 无 div 不动、消息以 <div> 开头不动。由 bundle 的 bc 组件在解析前调用。
+  // v6.38 卡片内部空行压缩（先生 · 2026-08-29 · 全文一字不漏复现）：
+  // CommonMark type 6 的 HTML 块【遇到空行即结束】——AI 在卡片内部排版时
+  // 加了空行（如 .sub 与 .sec 之间），mdast 会把卡片按空行拆成多个 html
+  // 片段（每段各自 case"html" → render 未闭合片段）→ 结构撕裂显示源码。
+  // 「单独发代码」（紧凑无空行）正常、全文（含内部空行）源码，正是此因。
+  // 修复：vcp-root 开标签之后到消息尾的连续空行（\n[ \t]*\n+）压缩为单个
+  // \n——整卡回归单一 htmlFlow，尾部文字随之并入块尾文本（渲染为卡后文本，
+  // 不影响卡片本体）。只压缩连续空行，单换行不受影响（紧凑排版天然安全）。
   function fixVcpBlank(text) {
     if (!text || text.indexOf('<div id="vcp-root"') === -1) return text
-    return text.replace(/([^\n])\n(?= *<div id="vcp-root")/g, '$1\n\n')
+    var t = text.replace(/([^\n])\n(?= *<div id="vcp-root")/g, '$1\n\n')
+    t = t.replace(/(<div id="vcp-root"[^>]*>)([\s\S]*)$/, function (m, open, rest) {
+      return open + rest.replace(/\n[ \t]*\n+/g, '\n')
+    })
+    return t
   }
   function render(raw, streaming) {
     var t0 = typeof performance !== 'undefined' && performance.now ? performance.now() : 0

@@ -855,4 +855,24 @@ console.log('== 20. 自愈层 v6.37：fixVcpBlank 卡片空行修复（文字+�
   ok('非字符串输入原样返回', () => assert.equal(fix(null), null))
 }
 
+// ---- 第 21 组：v6.38 卡片内部空行压缩（CommonMark type 6 遇空行拆 htmlFlow）----
+console.log('== 21. 自愈层 v6.38：fixVcpBlank 卡片内部空行压缩（全文含内部空行不撕裂）==')
+{
+  const s = resetCache()
+  const fix = s.fixBlank
+  const full = '门槛核对完毕～\n\n<div id="vcp-root">\n<style>\n#vcp-root{box-sizing:border-box;}\n</style>\n<div class="paper">\n<h2>标题</h2>\n<div class="sub">副标题</div>\n\n<div class="sec">① 逐条核验</div>\n<div class="chk">检查项</div>\n\n<div class="warnbox">警告</div>\n</div>\n</div>\n\n先生，结论一句话：拆 commit 就能过线。'
+  const out = fix(full)
+  const cardStart = out.indexOf('<div id="vcp-root"')
+  ok('卡片内部连续空行压缩为单个换行', () => assert.ok(!out.slice(cardStart).includes('\n\n'), 'vcp-root 之后无连续空行'))
+  ok('卡片前空行保留（v6.37 行为不回归）', () => assert.ok(out.includes('～\n\n<div id="vcp-root"')))
+  ok('卡片结构内容完整保留', () => assert.ok(out.includes('<div class="sec">① 逐条核验</div>') && out.includes('<div class="warnbox">警告</div>')))
+  ok('幂等：压缩后重复应用不再变化', () => assert.equal(fix(out), out))
+}
+{
+  const s = resetCache()
+  const fix = s.fixBlank
+  const compact = '<div id="vcp-root">\n<style>\n#vcp-root{box-sizing:border-box;}\n</style>\n<div class="paper">\n<h2>标题</h2>\n</div>\n</div>'
+  ok('紧凑卡（无内部空行）不受影响', () => assert.equal(fix(compact), compact))
+}
+
 console.log(`\n全部通过：${passed} 项断言 ✓`)
