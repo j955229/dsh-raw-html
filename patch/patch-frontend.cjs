@@ -4,9 +4,9 @@
  *
  * 修改 @deepseek-ai/dsh-web-frontend 的 dist bundle（index-*.js）：
  *
- *   A. pu() 的 case"html" 分支（v6 稳定区固化版）：
- *      localStorage['dsh.rawHtml'] === '1' 时，调 window.__vcpStable.render()
- *      把 HTML 流式内容转成 React 元素；否则维持原行为（HTML 显示为转义源码）。
+ *   A. pu() 的 case"html" 分支（v6.35 三态化版）：
+ *      localStorage['dsh.rawHtml'] !== '0' 时（未设置=默认开 / "1"=开 / "0"=显式关闭），
+ *      调 window.__vcpStable.render() 把 HTML 流式内容转成 React 元素；
  *      - 【表情包修复】Markdown 图片语法 ![alt](url) 先转 <img>（URL 白名单
  *        http/https、data:image/*、相对路径，其余协议不生成 img）
  *      - 【流式渲染 + 稳定区固化 v6】已渲染块固化 + 只重渲染尾巴：
@@ -102,6 +102,13 @@ const CASE_HTML_AFTER = String.raw`case"html":return function(){if(typeof localS
 // 注意：BEFORE 是含尾部 `}();` 的完整分支文本，AFTER 必须同样以 `}();` 结尾（IIFE 调用收尾）
 const CASE_HTML_V6_AFTER = String.raw`case"html":return function(){if(typeof localStorage!=="undefined"&&localStorage.getItem("dsh.rawHtml")==="1"){try{var vr=window.__vcpStable&&window.__vcpStable.render(n.value,i.streaming);if(vr!==null&&vr!==undefined)return vr}catch(e){}}return n.value}();`
 
+// v6.35（先生定调 2026-08-29）：html 分支开关三态化 ——
+// 原 v6 要求 dsh.rawHtml==="1" 才渲染；但该键只在用户点过「</>」按钮后才存在，
+// 新环境/清缓存后为 undefined → 一切裸 HTML（含 VCP 卡）显示源码（本次事故根因）。
+// 改为 !== "0"：undefined（从未设置）= 默认渲染（配合 v6-inject 启动自检落盘 "1"），
+// 用户经「</>」按钮显式关闭（"0"）才显示源码；并加 console.warn 诊断回退原因。
+const CASE_HTML_V7_AFTER = String.raw`case"html":return function(){if(typeof localStorage!=="undefined"&&localStorage.getItem("dsh.rawHtml")!=="0"){try{var vr=window.__vcpStable&&window.__vcpStable.render(n.value,i.streaming);if(vr!==null&&vr!==undefined)return vr}catch(e){if(typeof console!=="undefined")console.warn("[vcp] html 渲染异常，已回退源码",e)}}else if(typeof console!=="undefined")console.warn("[vcp] html 渲染已关闭（dsh.rawHtml===\"0\"，</> 按钮可重新开启）");return n.value}();`
+
 // ---- 锚点 B：vc() 属性循环（当前 bundle 增强 v2 状态）-----------------------
 const VC_LOOP_BEFORE = String.raw`for(const c of i.attributes){if(c.name==="onclick"){const m=/^input\s*\(\s*['"]([\s\S]*?)['"]\s*\)\s*;?\s*$/.exec(c.value);if(m)s.onClick=function(){const fn=window.__dshInput;fn&&fn(m[1])};continue}if(c.name==="style"){let sv=c.value;sv=sv.replace(/position\s*:\s*fixed\s*;?/gi,"").replace(/z-index\s*:\s*\d{4,}\s*;?/gi,"").replace(/content\s*:\s*[^;"']*;?/gi,"");s.style=hp(sv);continue}if(c.name==="class"){s.className=c.value;continue}if(c.name==="href"&&!/^(https?:|mailto:|\/|#)/i.test(c.value))continue;if(c.name==="src"&&!/^(https?:|data:image\/|\/|#)/i.test(c.value))continue;s[c.name]=c.value}`
 
@@ -137,6 +144,10 @@ const STYLE_REF_AFTER = String.raw`s.style=hp(sv);s.ref=function(el){if(el)for(c
 const CODE_CASE_RAW = String.raw`case"code":return wp(n,r,i);`
 const CODE_CASE_V1 = String.raw`case"code":{try{const _v=(n.value||"").trim();if(/^<div\s+id=["']vcp-root["']/i.test(_v)){const _r=window.__vcpStable&&window.__vcpStable.render(n.value,i.streaming);if(_r!==null&&_r!==undefined)return _r}}catch(_e){}return wp(n,r,i)}`
 const CODE_CASE_V2 = String.raw`case"code":{try{const _v=(n.value||"").trim();if(typeof localStorage!=="undefined"&&localStorage.getItem("dsh.rawHtml")==="1"&&/^<div\s+id=["']vcp-root["']/i.test(_v)){const _r=window.__vcpStable&&window.__vcpStable.render(n.value,i.streaming);if(_r!==null&&_r!==undefined)return _r}}catch(_e){}return wp(n,r,i)}`
+// v6.35（先生定调 2026-08-29）：围栏兜底三态化 —— 原 v6.32 带 === "1" 开关检查，
+// 开关未设置（undefined）时围栏包 VCP 卡也显示源码（本次事故形态）。改为 !== "0"：
+// 白名单（vcp-root 开头）仍保留防误伤普通代码块，显式关闭（"0"）才不接管。
+const CODE_CASE_V3 = String.raw`case"code":{try{const _v=(n.value||"").trim();if(typeof localStorage!=="undefined"&&localStorage.getItem("dsh.rawHtml")!=="0"&&/^<div\s+id=["']vcp-root["']/i.test(_v)){const _r=window.__vcpStable&&window.__vcpStable.render(n.value,i.streaming);if(_r!==null&&_r!==undefined)return _r}}catch(_e){if(typeof console!=="undefined")console.warn("[vcp] code 围栏渲染异常，已回退代码块",_e)}return wp(n,r,i)}`
 
 // ---- 锚点 C：vc() 定义前注入 v6 稳定区模块 ----
 // 模块源码来自同目录 v6-inject.js（无 import/export，依赖闭包 vc/hp/f 与全局 window/DOMParser）。
@@ -181,16 +192,36 @@ let v6Handled = false
   }
 }
 
-// ---- 围栏兜底升级状态机（v6.32）：旧版（无开关检查）→ 新版（带开关检查）----
-// 旧版 bug：关闭渲染插件后围栏 HTML 仍被强制渲染成卡片（先生实测发现）。
+// ---- 围栏兜底升级状态机（v6.32 → v6.35）：v6.32 带 === "1" 开关检查（新环境
+// undefined 时 VCP 卡显示源码）；v6.35 三态化（!== "0"：未设置默认开、显式关闭才拒）。
 let codeCaseHandled = false
-if (t.indexOf(CODE_CASE_V1) !== -1) {
-  t = t.replace(CODE_CASE_V1, CODE_CASE_V2)
+if (t.indexOf(CODE_CASE_V3) !== -1) {
   codeCaseHandled = true
-  console.log('[patch] 围栏兜底升级：补渲染开关检查（v6.32）')
+  console.log('[patch] 围栏兜底已是最新版（v6.35 三态化），跳过')
 } else if (t.indexOf(CODE_CASE_V2) !== -1) {
+  t = t.replace(CODE_CASE_V2, CODE_CASE_V3)
   codeCaseHandled = true
-  console.log('[patch] 围栏兜底已是最新版（带开关检查），跳过')
+  console.log('[patch] 围栏兜底升级：v6.32 开关检查 → v6.35 三态化')
+} else if (t.indexOf(CODE_CASE_V1) !== -1) {
+  t = t.replace(CODE_CASE_V1, CODE_CASE_V3)
+  codeCaseHandled = true
+  console.log('[patch] 围栏兜底升级：v6.30 纯白名单 → v6.35 三态化')
+}
+
+// ---- html 分支升级状态机（v6/v5 → v6.35）：同上三态化，消除「开关未设置 =
+// 一切裸 HTML 显示源码」的陷阱；旧版（v5 无 render 调用 / v6 === "1"）一律升级。
+let htmlCaseHandled = false
+if (t.indexOf(CASE_HTML_V7_AFTER) !== -1) {
+  htmlCaseHandled = true
+  console.log('[patch] html 分支已是最新版（v6.35 三态化），跳过')
+} else if (t.indexOf(CASE_HTML_V6_AFTER) !== -1) {
+  t = t.replace(CASE_HTML_V6_AFTER, CASE_HTML_V7_AFTER)
+  htmlCaseHandled = true
+  console.log('[patch] html 分支升级：v6 开关检查 → v6.35 三态化')
+} else if (t.indexOf(CASE_HTML_AFTER) !== -1) {
+  t = t.replace(CASE_HTML_AFTER, CASE_HTML_V7_AFTER)
+  htmlCaseHandled = true
+  console.log('[patch] html 分支升级：v5 → v6.35 三态化')
 }
 
 /**
@@ -209,9 +240,9 @@ if (!v6Handled) {
 }
 if (!codeCaseHandled) {
   REPLACEMENTS.push({
-    label: 'E.case"code" 围栏兜底（v6.30：html 代码块 → vcp render）',
+    label: 'E.case"code" 围栏兜底（v6.35 三态化：vcp-root 白名单 + 显式关闭才拒）',
     from: CODE_CASE_RAW,
-    to: CODE_CASE_V2,
+    to: CODE_CASE_V3,
   })
 }
 REPLACEMENTS.push(
@@ -225,12 +256,14 @@ REPLACEMENTS.push(
     from: STYLE_REF_BEFORE,
     to: STYLE_REF_AFTER,
   },
-  {
-    label: 'A.case"html" 分支（v5.1 → v6 稳定区固化）',
-    from: CASE_HTML_BEFORE,
-    to: CASE_HTML_V6_AFTER,
-  },
 )
+if (!htmlCaseHandled) {
+  REPLACEMENTS.push({
+    label: 'A.case"html" 分支（v5/v6 → v6.35 三态化：未设置默认开）',
+    from: CASE_HTML_BEFORE,
+    to: CASE_HTML_V7_AFTER,
+  })
+}
 
 let changed = 0
 for (const r of REPLACEMENTS) {

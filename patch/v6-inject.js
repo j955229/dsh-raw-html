@@ -10,6 +10,41 @@
  *     自动补 transform-box:fill-box（旋转/缩放不飘走）
  *   - 自愈层全树覆盖：根/子容器 box-sizing · table/pre 溢出防护 · 表格防撑破
  *     组合拳（width:100% + nowrap 单元格裁剪）· 缺背景补纸色底
+ *   - v6.33 自愈层再添：字体链继承兜底（未声明字体的元素强制继承根容器字体——
+ *     防皮肤劫持导致字符级 fallback 字面率不一，如「登陆」显小；根容器字体链
+ *     CSS 锁定 + 常用文字标签逐条 inherit，双保险，不依赖 :where()）
+ *   - v6.33b 圆角不兜底（先生定调）：border-radius 是装饰不是结构，AI 没写可能
+ *     是「要直角」（报纸/极简风故意省略容器装饰）——强补圆角会误判意图；结构
+ *     兜底照做、圆角默认直角，审美仍由 AI 决定
+ *   - v6.33c DOM 层最终强制（先生实测 CSS 注入仍显小后升级）：React 挂载后对
+ *     「无内联字体且未被显式字体选择器命中」的文字元素直接 setProperty
+ *     ('font-family','inherit','important')——内联 !important 是最高优先级，
+ *     任何选择器规则（含皮肤）都压不住；AI 显式书法/等宽字体（内联或类规则）
+ *     一律尊重；根容器兜底链被皮肤压住时同步锁定系统链
+ *   - v6.33d 根因落网（先生三连问换来的认知）：「强调词小」不是字面率差异，
+ *     是 font-size 被皮肤 textRule 压制——类规则 boost 能保住 .t 自己的字号，
+ *     但「没写 font-size 的强调词 span」只有继承值，输给皮肤直接作用的
+ *     font-size !important。v6.33d 把 font-family / font-size / font-weight /
+ *     font-style / line-height / letter-spacing 全部锁成 inherit（仅覆盖未显式
+ *     声明的属性；color/text-align 不锁——颜色是 AI 设计、对齐是布局）
+ *   - v6.33e 版面收窄兜底（先生实测 5 张测试卡后定调）：AI 没写任何宽度时根容器
+ *     默认 max-width:920px（报纸版心，不再拉满屏幕成整条色板）；AI 显式写了
+ *     width/max-width（全宽或自定义宽度）→ 尊重不补
+ *   - v6.33f 花括号平衡全路径兜底（先生实测卡 2 SVG 动画不转）：流式 tail 的
+ *     closeBraces 只覆盖「<style> 未闭合」；非流式（历史消息）<style> 已闭合但
+ *     漏 } 时，浏览器把后续规则与 @keyframes 吞进前块 → 动画失效。现对每个闭合
+ *     <style> 内的 CSS 也补平衡（只补净缺口数量的 }，多余 } 忽略，字符串内
+ *     花括号配对抵消，误伤面极小）
+ *   - v6.34 SVG 类动画中心自愈（先生实测卡 2 橙点不转）：CSS 类动画不经过
+ *     guardChildren 的内联检查，<g> 的 transform-origin 走浏览器默认 → 整组绕
+ *     画面原点转、非对称元素轨道不协调。DOM 层 getComputedStyle 判定「有动画且
+ *     origin 是默认值」→ 补 transform-box:fill-box + transform-origin:center，
+ *     动画围绕元素自身包围盒中心旋转；AI 显式 origin 尊重
+ *   - v6.35 渲染开关三态化（先生定调 2026-08-29 · 上架申请书卡实测）：
+ *     启动自检：dsh.rawHtml 从未设置（undefined）→ 自动落盘 "1" 默认开启；
+ *     html/code 两分支判定改 !== "0"（见 patch-frontend.cjs 锚点 A/E）——
+ *     undefined 不再等于关闭，只有「</>」按钮显式设 "0" 才关闭。
+ *     只补「从未设置」，绝不覆盖用户显式选择；回退路径带 console.warn 诊断
  *   - code 对比度三级阶梯模型（大背景→code→字逐级对比）+ 半透明叠加判定
  *   - 代码围栏兜底（```html 包卡片自动剥离渲染，带渲染开关检查）
  *   - 非流式（历史消息/终帧）路径同样执行 finalizeRoot 兜底
@@ -37,6 +72,16 @@
       _rm.id = 'vcp-reduced-motion'
       _rm.textContent = '@media (prefers-reduced-motion: reduce){#vcp-root,[id^="vcp-msg-"],#vcp-root *,[id^="vcp-msg-"] *{animation:none !important;transition:none !important}}'
       document.head.appendChild(_rm)
+    }
+  } catch (e) {}
+  // v6.35 渲染器兜底（先生定调 2026-08-29）：开关三态化自检——
+  // dsh.rawHtml 从未被「</>」按钮写入（undefined）时，自动默认开启并落盘 "1"，
+  // 消除「新环境/清缓存后一切 VCP 卡显示源码」的陷阱；用户显式设 "0"（</> 关闭）
+  // 才真正关闭。只补「从未设置」，绝不覆盖用户已有的显式选择。
+  try {
+    if (typeof localStorage !== 'undefined' && localStorage.getItem('dsh.rawHtml') === null) {
+      localStorage.setItem('dsh.rawHtml', '1')
+      if (typeof console !== 'undefined') console.debug('[vcp] dsh.rawHtml 未设置，渲染器自动默认开启（</> 按钮可关闭）')
     }
   } catch (e) {}
   // 宿主函数别名（跨前端代际兼容）：rc.5~rc.7 为 vc/hp；rc.8+ 压缩器改名 Xu/jd（rc.8 为 Sd）。
@@ -150,18 +195,66 @@
   // 不动背景/布局/动画，卡内层叠关系不变；已有 important 跳过（幂等）。
   // 值里不会出现 `;` / `!` / `}`（CSS 声明分隔符），故用 [^;!}] 安全取全值。
   var BOOST_TEXT_DECL_RE = /(color|font-family|font-size|font-weight|font-style|line-height|letter-spacing|text-align|text-shadow)\s*:\s*([^;!}]+?)(!important)?\s*(;|})/gi
+  // @font-face 块保护（先生 · 2026-08-28 · 字库增刊实测）：@font-face 描述符
+  // 不允许 !important——一旦注入（font-family:'X' → font-family:'X'!important），
+  // 整个 @font-face 规则作废、字体加载失败（先生下载的鱼尾行书/狂派手书等
+  // 全部回落系统字体）。解法：boost 前把 @font-face 块整体替换为占位符
+  // （\u0001F<序号>\u0001，不含 ;!} 故不会被 DECL_RE 命中），boost 后再还原。
+  var FACE_PLACEHOLDER_RE = /@font-face\s*\{[^}]*\}/gi
   function boostTextImportant(css) {
     if (!css) return css
-    return css.replace(BOOST_TEXT_DECL_RE, function (m, prop, val, imp, term) {
+    var faces = []
+    css = css.replace(FACE_PLACEHOLDER_RE, function (m) {
+      faces.push(m)
+      return '\u0001F' + (faces.length - 1) + '\u0001'
+    })
+    css = css.replace(BOOST_TEXT_DECL_RE, function (m, prop, val, imp, term) {
       if (imp) return m
       return prop + ':' + val + '!important' + term
     })
+    if (faces.length) {
+      css = css.replace(/\u0001F(\d+)\u0001/g, function (m, i) { return faces[+i] })
+    }
+    return css
   }
   function boostStyle(text) {
     if (!text || text.indexOf('<style') === -1) return text
     return text.replace(/(<style[^>]*>)([\s\S]*?)(<\/style>)/gi, function (m, open, css, close) {
       return open + boostTextImportant(css) + close
     })
+  }
+
+  // ---- 字体链继承兜底（v6.33）：未显式声明字体的元素强制继承根容器字体 ----
+  // 现象：皮肤/主题插件注入带 !important 的全局 font-family 规则（特异性约 (0,2,0)），
+  // 卡片里「没写字体」的元素（如标题里仅染色的强调 span）被劫持成皮肤字体；不同字符
+  // 命中的 fallback 字面率不一 → 同字号却显小（先生实测「登陆」比「海南昌江沿海」小）。
+  // v6.33 首版用 #uid :where(*) 单条规则，先生实测仍小——根因：applyRootGuard 补的
+  // 根容器 fontFamily 是普通内联（ref 锁定只认源码写了的内联属性），皮肤规则仍能劫持
+  // 根容器本身；子元素 inherit 继承的是「被劫持的根容器」→ 链断。v6.33b 双保险：
+  //   ① #uid{font-family:<系统链> !important} —— 锁定根容器（AI 内联/类显式字体
+  //      分别被 ref 锁定 (内联!important) 与 boost 后 (1,1,0)!important 稳压，尊重）
+  //   ② 常用文字标签逐条 #uid tag{font-family:inherit !important} —— 不依赖 :where()
+  //      （规避选择器引擎兼容面），特异性 (1,0,1)!important 稳压皮肤 (0,2,0)!important
+  // 只兜「没写字体」的元素：AI 显式书法/等宽字体（类规则 boost 后 (1,1,0)!important）
+  // 稳压本规则；内联 font-family 走 parseOpen ref 锁定（内联 !important）不受影响。
+  // 仅对「有 <style> 的卡」注入（挂最后一个 </style> 前）——不改变无 style 卡的
+  // DOM 结构（纯内联卡字体走 ref 锁定，风险面小）；流式中 <style> 未闭合帧不注入、
+  // 闭合帧自动注入。
+  var FONT_INHERIT_TAGS = 'div,p,span,h1,h2,h3,h4,h5,h6,li,td,th,a,strong,b,em,i,blockquote,pre,code,small,label,figcaption,summary,button'
+  var FONT_SYSTEM_CHAIN = "ui-sans-serif,system-ui,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif"
+  var FONT_INHERIT_RULE = function (uid) {
+    var out = '\n  /* v6.33 渲染器注入：字体链兜底（根容器锁定 + 未声明字体元素继承）*/\n  #' + uid + '{font-family:' + FONT_SYSTEM_CHAIN + ' !important}\n  '
+    var tags = FONT_INHERIT_TAGS.split(',')
+    for (var i = 0; i < tags.length; i++) {
+      out += '#' + uid + ' ' + tags[i] + '{font-family:inherit !important}\n  '
+    }
+    return out
+  }
+  function injectFontInherit(html, uid) {
+    if (!html) return html
+    var li = html.lastIndexOf('</style>')
+    if (li === -1) return html
+    return html.slice(0, li) + FONT_INHERIT_RULE(uid) + html.slice(li)
   }
 
   // ---- 消息级作用域化（v6.12）：根治「后卡样式污染前卡」----
@@ -192,6 +285,7 @@
     // 全文全局替换：正文里的 #vcp-root 字样也一并改（概率极低，无害），
     // 关键是让「未闭合 <style>」里正在输出的选择器也随帧指向唯一 id。
     out = out.replace(/#vcp-root/g, '#' + uid)
+    out = injectFontInherit(out, uid) // v6.33：字体链继承兜底注入
     return out
   }
 
@@ -409,6 +503,49 @@
     return out
   }
 
+  // 位置感知的花括号修复（v6.33f）：closeBraces 只在末尾补 }，救不回被吞的规则。
+  // 现象：`.code{...;` 漏 }，后续 `.dot` 规则与 @keyframes 被浏览器吞进 .code
+  // 声明块（先生实测卡 2：SVG 动画不转）。
+  // 启发式（块类型栈 + 选择器挪位）：CSS 里「普通规则块（选择器{...}）只能含声明、
+  // 不能嵌套规则」——遇到 `{` 且当前块是 rule 块 → 前一个规则漏了 }：
+  //   · 把「新 { 前刚输出的选择器文本」从 out 尾部截出，挪到补的 } 之后——
+  //     让新规则独立成块（`#vcp-root .dot` 不再被当作前块声明）
+  //   · at-rule 块（@media/@supports/@keyframes 等，以 @ 开头）允许嵌套规则，
+  //     栈顶是 at 时不补 —— 正常嵌套零误伤
+  //   · 正常 CSS 的规则块都有配对 }，栈不残留 rule → 幂等
+  // 选择器文本边界：只认 ; { } 为块边界（选择器可含空格/[]，不截断）。
+  function closeBracesSmart(css) {
+    var depth = 0, out = ''
+    var stack = [] // 每层块类型：'at' | 'rule'
+    for (var i = 0; i < css.length; i++) {
+      var ch = css[i]
+      if (ch === '{') {
+        // 取新 { 前的选择器/@规则名文本（从上一个块边界 ; { } 到 out 末尾）
+        var cut = out.length
+        while (cut > 0 && out[cut - 1] !== ';' && out[cut - 1] !== '{' && out[cut - 1] !== '}') cut--
+        var sel = out.slice(cut).trim()
+        var isAt = sel.charAt(0) === '@'
+        var topIsRule = stack.length > 0 && stack[stack.length - 1] === 'rule'
+        if (topIsRule) {
+          // 前块漏 }：选择器文本挪到 } 之后 → 新规则独立
+          out = out.slice(0, cut) + '}' + sel
+          stack.pop()
+          depth--
+        }
+        stack.push(isAt ? 'at' : 'rule')
+        depth++
+        out += ch
+      } else if (ch === '}') {
+        if (depth > 0) { depth--; if (stack.length) stack.pop() }
+        out += ch
+      } else {
+        out += ch
+      }
+    }
+    while (depth-- > 0) out += '}'
+    return out
+  }
+
   function parseFrag(html, isTail) {
     if (!html) return null
     html = escapeUnclosedRawtext(html, isTail)
@@ -425,6 +562,16 @@
       var cut = html.indexOf('\u0000')
       if (cut !== -1) html = html.slice(0, cut)
     }
+    // 花括号平衡兜底（v6.33f）：流式 tail 的 closeBraces 只覆盖「<style> 未闭合」，
+    // 且只在末尾补 }——非流式（历史消息/终帧）里 <style> 已闭合但漏 } 时，浏览器
+    // 会把后续规则与 @keyframes 吞进前一个规则块 → 动画失效、样式错乱（先生实测：
+    // 卡 2 漏 } + @keyframes 被吞 → SVG 动画不转）。此处对每个闭合 <style> 内的
+    // CSS 做位置感知修复（closeBracesSmart：在新规则起始处就地补缺失的 }），
+    // 只在真的不平衡时改动（平衡 CSS 原样返回）。
+    html = html.replace(/<style[^>]*>([\s\S]*?)<\/style>/gi, function (m, css) {
+      var fixed = closeBracesSmart(css)
+      return fixed === css ? m : m.replace(css, fixed)
+    })
     // 文字声明优先级提升：给已闭合 <style> 内的 font-family/color 等加 !important
     // （流式 tail 补闭合后同样走到这里 → 流式期间字体亦获最高优先级）。
     html = boostStyle(html)
@@ -489,10 +636,16 @@
 
   // ---- 根容器布局防崩兜底（v6.22）：自愈层 · 结构永不崩 ----
   // 不管 AI 怎么写，以下结构属性缺失时自动补默认（不覆盖显式意图）：
-  //   box-sizing:border-box    → width:100% + padding 不再出框
-  //   max-width:100%           → 卡片不超出消息容器
+  //   box-sizing:border-box  → width:100% + padding 不再出框
+  //   max-width:920px        → 缺宽度上限时默认收窄到报纸版心（v6.33e：AI 没写
+  //                            任何宽度就拉满屏幕成整条色板；920px 版心形成
+  //                            「卡片」边界感——先生实测 5 张测试卡后定调）
   //   overflow-wrap:break-word → 长 URL / 长英文词不撑破版面
-  //   font-family              → 缺省字体时用系统无衬线链（防裸奔默认字体）
+  //   font-family            → 缺省字体时用系统无衬线链（防裸奔默认字体）
+  // 宽度判断：AI 显式写了 width 或 max-width（全宽/自定义宽度意图）→ 尊重不补。
+  // 圆角不兜底（先生定调 · v6.33b）：border-radius 是装饰不是结构——AI 没写圆角
+  //   ≠ 忘记，可能是报纸/极简风「要直角」而故意省略容器装饰；强补 24px 会误判
+  //   AI 意图。结构兜底（背景/盒子/字体链）照兜，圆角默认直角（0），尊重设计。
   // 纯属性操作，每帧微秒级、零 token 消耗；与渲染器既有的 img 收敛 /
   // 文字 important / 花括号平衡同属「自愈层」，审美仍由 AI 决定、结构由程序兜底。
   function applyRootGuard(props) {
@@ -500,9 +653,9 @@
     if (!/^vcp-(msg-)?\d+$/.test(id)) return
     var st = props.style || (props.style = {})
     if (!st.boxSizing) st.boxSizing = 'border-box'
-    if (!st.maxWidth) st.maxWidth = '100%'
+    if (!st.maxWidth && !st.width) st.maxWidth = '920px' // v6.33e：缺宽度 → 收窄版心
     if (!st.overflowWrap) st.overflowWrap = 'break-word'
-    if (!st.fontFamily) st.fontFamily = "ui-sans-serif,system-ui,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif"
+    if (!st.fontFamily) st.fontFamily = FONT_SYSTEM_CHAIN
   }
 
   // ---- 子容器布局防崩（v6.23）：递归补 box-sizing + 表格/代码块溢出防护 ----
@@ -662,6 +815,110 @@
     } catch (e) { /* 兜底失败不影响 */ }
   }
 
+  // ---- 文字属性 DOM 强制（v6.33d）：视觉大小相关的文字属性统一锁继承 ----
+  // 先生实测链：v6.33 锁 font-family → 仍小；v6.33b CSS 双保险 → 仍小；
+  // v6.33c DOM 层锁 font-family → 仍小。**最终根因（先生三连问换来的认知）：
+  // 「小」不是字面率差异，是 font-size 被皮肤压制！**皮肤的 textRule 同时注入
+  // font-size 与 font-family（均 !important，特异性约 (0,2,0)）。卡片类规则
+  // boost 后 (1,1,0)!important 能保住 .t 自己的 19px，但「没写 font-size 的
+  // 强调词 span」只有继承值——继承输给皮肤直接作用的规则 → 强调词被压成皮肤
+  // 字号，视觉显小。v6.33d 把全部「视觉大小相关文字属性」锁成 inherit：
+  //   font-family / font-size / font-weight / font-style / line-height / letter-spacing
+  // 锁继承 = 把 CSS 默认行为提升到最高优先级，只覆盖「未显式声明的属性」：
+  //   ① 元素内联写了该属性 → 跳过（源码内联已走 parseOpen ref 锁定）
+  //   ② 元素被卡片 <style> 中含该属性的规则选择器命中 → 跳过（boost 已保护）
+  //   color / text-align 等不锁——颜色是 AI 设计（.hot 橙色），对齐是布局。
+  // 幂等：dataset 标记防重复；setProperty 重复执行亦无害。
+  var TEXT_INHERIT_PROPS = ['font-family', 'font-size', 'font-weight', 'font-style', 'line-height', 'letter-spacing']
+  function collectTextSelectors(root) {
+    var map = {}
+    for (var pi = 0; pi < TEXT_INHERIT_PROPS.length; pi++) map[TEXT_INHERIT_PROPS[pi]] = []
+    var styles = root && root.querySelectorAll ? root.querySelectorAll('style') : []
+    for (var k = 0; k < styles.length; k++) {
+      var css = styles[k].textContent || ''
+      var blocks = css.split('}')
+      for (var b = 0; b < blocks.length; b++) {
+        var block = blocks[b]
+        var open = block.lastIndexOf('{')
+        if (open === -1) continue
+        var decls = block.slice(open + 1)
+        var sel = block.slice(0, open)
+        var parts = sel.split(',')
+        for (var pi2 = 0; pi2 < TEXT_INHERIT_PROPS.length; pi2++) {
+          var prop = TEXT_INHERIT_PROPS[pi2]
+          if (!new RegExp('(^|[;\\s])' + prop.replace('-', '\\-') + '\\s*:', 'i').test(decls)) continue
+          for (var p2 = 0; p2 < parts.length; p2++) {
+            var one = parts[p2].trim()
+            if (one && map[prop].indexOf(one) === -1) map[prop].push(one)
+          }
+        }
+      }
+    }
+    return map
+  }
+  // ---- SVG 动画中心自愈（v6.34）：CSS 类动画缺 transform-origin 时补 fill-box ----
+  // 先生实测（卡 2）：@keyframes 被救回后动画转起来了，但「橙色小点没转动、蓝色
+  // 大圈在转」——CSS 类里的动画（.dot{animation:spin...}）不经过 guardChildren 的
+  // 内联 style 检查（它只认 props.style），SVG <g> 的 transform-origin 走浏览器
+  // 默认（view-box 原点），旋转中心不在元素自身 → 整组绕画面原点转，非对称元素
+  // 的轨道运动不协调。解法：DOM 层（挂载后）遍历 SVG 后代，getComputedStyle 判定
+  // 「有动画」且 transform-origin 是默认值（AI 未显式声明）→ 补
+  // transform-box:fill-box + transform-origin:center——动画围绕元素自身包围盒中心
+  // 旋转（整体自转，对称协调）。AI 显式写了 origin（内联或类规则，计算值非默认）
+  // → 尊重。幂等：setProperty 重复执行无害。
+  function healSvgAnimation(root) {
+    if (!root || root.nodeType !== 1 || !root.querySelectorAll) return
+    if (typeof window === 'undefined' || !window.getComputedStyle) return
+    try {
+      var els = root.querySelectorAll('svg *')
+      for (var i = 0; i < els.length; i++) {
+        var el = els[i]
+        var cs = window.getComputedStyle(el)
+        if (!cs || !cs.animationName || cs.animationName === 'none') continue
+        var origin = cs.transformOrigin || ''
+        var isDefault = origin === '' || origin === '0px 0px' || origin === '50% 50%'
+        if (isDefault) {
+          el.style.setProperty('transform-box', 'fill-box', 'important')
+          el.style.setProperty('transform-origin', 'center', 'important')
+        }
+      }
+    } catch (e) { /* 自愈失败不影响 */ }
+  }
+
+  function enforceFontChain(el) {
+    if (!el || el.nodeType !== 1 || !el.querySelectorAll || !el.style) return
+    if (el.dataset && el.dataset.vcpFontDone === 'true') return
+    try {
+      var selMap = collectTextSelectors(el)
+      function matched(node, prop) {
+        var sels = selMap[prop] || []
+        for (var s = 0; s < sels.length; s++) {
+          try { if (node.matches(sels[s])) return true } catch (e) { /* 非法选择器跳过 */ }
+        }
+        return false
+      }
+      // ① 根容器：font-family 兜底链或无字体 → 锁定系统链（AI 显式内联/选择器尊重）
+      var rootFont = el.style.fontFamily
+      if (!(rootFont && rootFont.indexOf('ui-sans-serif') !== 0 && !matched(el, 'font-family'))) {
+        if (!matched(el, 'font-family')) {
+          el.style.setProperty('font-family', FONT_SYSTEM_CHAIN, 'important')
+        }
+      }
+      // ② 子元素：逐属性——无内联声明且未被含该属性的选择器命中 → 锁 inherit
+      var els = el.querySelectorAll(FONT_INHERIT_TAGS)
+      for (var i = 0; i < els.length; i++) {
+        var node = els[i]
+        for (var p = 0; p < TEXT_INHERIT_PROPS.length; p++) {
+          var prop = TEXT_INHERIT_PROPS[p]
+          if (node.style && node.style[prop]) continue
+          if (matched(node, prop)) continue
+          node.style.setProperty(prop, 'inherit', 'important')
+        }
+      }
+      if (el.dataset) el.dataset.vcpFontDone = 'true'
+    } catch (e) { /* 兜底失败不影响 */ }
+  }
+
   function commit(blocks, list) {
     for (var i = 0; i < blocks.length; i++) {
       var s = blocks[i]
@@ -702,11 +959,36 @@
       return '<div class="mermaid" style="position:relative;display:block;width:100%;box-sizing:border-box;margin:14px 0;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 1px 4px rgba(15,23,42,.06);"><div class="vcp-mermaid-view" style="overflow:auto;max-height:' + MERMAID_MAX_HEIGHT + ';padding:16px 14px;text-align:center;">' + src + '</div></div>'
     })
   }
+  // v6.36 code 内容实体保护（先生 · 2026-08-29 · 交付单 code 块露代码实测）：
+  // 模型在 <pre><code> 里展示 HTML 代码时，写 `&lt;div`（已转义）或裸 `<div`，
+  // 经 DOMParser 解码/解析后会被当成【真实标签】——未闭合的 div 把后续
+  // </span></code></pre> 全吞成文本露出（先生交付单实测：case"html":</span> 可见）。
+  // 修复：mermaid 转换之后（mermaid pre 已转 div，不受影响），对 <code> 内容做
+  // 实体保护——白名单内联标签（span/b/em/i/strong，AI 常用高亮）占位保留，
+  // 其余裸 < / > 全部转义 &lt; / &gt;；已有实体（&lt;div）不含裸 <，天然幂等。
+  var CODE_TAG_HOLD_RE = /<(\/?(?:span|b|em|i|strong)[^>]*)>/g
+  function protectCodeEntities(text) {
+    if (!text || text.indexOf('<pre') === -1) return text
+    return text.replace(/<pre([^>]*)>([\s\S]*?)<\/pre>/gi, function (m, attrs, inner) {
+      var out = inner.replace(/<code[^>]*>([\s\S]*?)<\/code>/gi, function (m2, body) {
+        var held = []
+        var saved = body.replace(CODE_TAG_HOLD_RE, function (mm) {
+          held.push(mm)
+          return '\u0000C' + (held.length - 1) + '\u0000'
+        })
+        saved = saved.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        saved = saved.replace(/\u0000C(\d+)\u0000/g, function (mm, i) { return '<' + held[+i] + '>' })
+        return m2.replace(body, saved)
+      })
+      return '<pre' + attrs + '>' + out + '</pre>'
+    })
+  }
   function render(raw, streaming) {
     var t0 = typeof performance !== 'undefined' && performance.now ? performance.now() : 0
     var v = sanitizeStyle(constrainImg(imgConvert(scopeVcp(raw || ''))))
     if (streaming) v = mathPlaceholder(v, true)
     v = mermaidBlockConvert(v)
+    v = protectCodeEntities(v)
     if (!v) return null
     if (!streaming) {
       // 非流式（流式结束后的最终帧 / 历史消息）：直接完整渲染，
@@ -1260,6 +1542,8 @@
       if (lastMathEl && lastMathEl.isConnected !== false) {
         if (window.__vcpMath) window.__vcpMath.processMath(lastMathEl)
         finalizeRoot(lastMathEl) // v6.23：根容器背景兜底（确认无背景才补浅纸底）
+        enforceFontChain(lastMathEl) // v6.33c：字体链 DOM 强制（流式停顿兜底）
+        healSvgAnimation(lastMathEl) // v6.34：SVG 类动画中心自愈（流式停顿兜底）
       }
       followStop()
     }, MATH_DEBOUNCE_MS)
@@ -1461,6 +1745,8 @@
           if (curRef) curRef(el)
           if (el && el.nodeType === 1) {
             applyColorVars(el)
+            enforceFontChain(el) // v6.33c：字体链 DOM 强制（不依赖 KaTeX 就绪）
+            healSvgAnimation(el) // v6.34：SVG 类动画中心自愈（fill-box）
             if (window.__vcpMath) {
               if (streaming) {
                 lastMathEl = el
@@ -1503,6 +1789,6 @@
     chromeForProps: chromeForProps
   }
 
-  window.__vcpStable = { render: render }
+  window.__vcpStable = { render: render, _test: { collectTextSelectors: collectTextSelectors, enforceFontChain: enforceFontChain, healSvgAnimation: healSvgAnimation } }
 })()
 /*__DSH_V6_INJECT_END__*/
