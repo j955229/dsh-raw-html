@@ -20,6 +20,8 @@ release/
 .DS_Store
 Thumbs.db
 .write_test
+.writetest
+.wtest
 
 # 测试临时产物
 tests/tmp-*
