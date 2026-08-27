@@ -12,7 +12,7 @@
 
 ### 0.0 内置精选（随插件分发 · 无需配置 · 直接可用 · 全部开源授权）
 
-> 用法：`@font-face{font-family:'Lanxi-WenKai';src:url('/fonts/Lanxi-WenKai.woff2');}` 后引用。由 `tools/subset_fonts.py` 生成（GB2312 一级 3755 字 + 标点 + 数字序号）。全部为开源授权字体（OFL/Apache），随包分发无授权风险。
+> 用法：`@font-face{font-family:'Lanxi-WenKai';src:url('/fonts/Lanxi-WenKai.woff2');}` 后引用。由 `tools/subset_fonts.py`（开源 7 款）+ `tools/subset-style-fonts.py`（12 风格全量 19 款，先生 2026-08-29 拍板入库）生成（GB2312 一级 3755 字 + 标点 + 数字序号；鱼尾行书繁为全 BMP 保繁体）。**26 款内置字体随包分发，任何电脑装插件即开盖即用**；含开源授权 + 先生自备字库子集（授权由先生确认）。
 
 | 领域 | font-family 名 | /fonts/ 路径 | 体积 |
 |---|---|---|---|
@@ -23,10 +23,29 @@
 | 黑体·细 | `Lanxi-HeiTiLight` | Lanxi-HeiTiLight.woff2 | 1.3MB |
 | 黑体·粗 | `Lanxi-HeiTiBold` | Lanxi-HeiTiBold.woff2 | 1.4MB |
 | 英文花体 | `Lanxi-GreatVibes` | Lanxi-GreatVibes.woff2 | 44KB |
+| 宋体·正文（warm-minimal） | `Lanxi-可宋` | Lanxi-可宋.woff2 | 2.79MB |
+| 宋体·标题 | `Lanxi-朗宋` | Lanxi-朗宋.woff2 | 2.05MB |
+| 宋体·副题 | `Lanxi-品宋` | Lanxi-品宋.woff2 | 2.53MB |
+| 宋体·颜韵 | `Lanxi-颜宋` | Lanxi-颜宋.woff2 | 2.37MB |
+| 极细·空灵 | `Lanxi-静黑超细` | Lanxi-静黑超细.woff2 | 1.39MB |
+| 黑体·几何 | `Lanxi-点黑` | Lanxi-点黑.woff2 | 1.92MB |
+| 冲击·超粗 | `Lanxi-超粗黑` | Lanxi-超粗黑.woff2 | 0.73MB |
+| 可爱·卡通 | `Lanxi-卡通` | Lanxi-卡通.woff2 | 1.17MB |
+| 可爱·手绘 | `Lanxi-叮叮` | Lanxi-叮叮.woff2 | 4.21MB |
+| 可爱·萌系 | `Lanxi-喵喵` | Lanxi-喵喵.woff2 | 2.88MB |
+| 手写·文人 | `Lanxi-春兰茅坤` | Lanxi-春兰茅坤.woff2 | 1.73MB |
+| 手写·浪漫 | `Lanxi-爱情手写` | Lanxi-爱情手写.woff2 | 1.78MB |
+| 书法·行书（刊头首选） | `Lanxi-鱼尾行书` | Lanxi-鱼尾行书.woff2 | 3.70MB |
+| 书法·江湖 | `Lanxi-狂侠体` | Lanxi-狂侠体.woff2 | 3.57MB |
+| 少女·手写日记（仅手账场景） | `Lanxi-暗恋初夏` | Lanxi-暗恋初夏.woff2 | 3.25MB |
+| 少女·标题俏皮（仅手账场景） | `Lanxi-秀英体` | Lanxi-秀英体.woff2 | 1.82MB |
+| 少女·软萌（仅手账场景） | `Lanxi-初心少女` | Lanxi-初心少女.woff2 | 1.46MB |
+| 少女·童趣（仅手账场景） | `Lanxi-丫丫体` | Lanxi-丫丫体.woff2 | 1.65MB |
+| 繁体·行书（须配繁体内容） | `Lanxi-鱼尾行书繁` | Lanxi-鱼尾行书繁.woff2 | 7.64MB |
 
 ### 0.1 外置全量（可选配置字体根目录后可用 · 参考清单 · 用户自备）
 
-> ⚠️ 外置大库为用户**自备**字体（非随包分发），下列清单仅供参考；其中可能含商业字库，授权由用户自行确认。内置精选（0.0）已全部开源。
+> ⚠️ 外置大库为用户**自备**字体（非随包分发），下列清单仅供参考；其中可能含商业字库，授权由用户自行确认。**12 风格核心字体已全部子集化内置（§0.0），此处仅剩未入库的扩展款**。
 
 | 风格 | 字体（font-family 名） | 相对路径（/fonts/ 之后） |
 |---|---|---|
@@ -40,35 +59,17 @@
 | 书法·舒体 | `Lanxi-舒体` | `方正所有字体/02/FZfonts/FZSTJW.TTF` |
 | 艺术·装饰 | `Lanxi-黄金时代` | `造字工房最全字体-2016-01-06更新/艺术字体/MFTheGoldenEra_Noncommercial-Bold.ttf` |
 | 艺术·优雅 | `Lanxi-尚雅` | `造字工房最全字体-2016-01-06更新/艺术字体/MFShangYa_Noncommercial-Regular.ttf` |
-| 艺术·前卫 | `Lanxi-点黑` | `造字工房最全字体-2016-01-06更新/黑体系列/MFDianHei_Noncommercial-Regular.ttf` |
 | 艺术·几何 | `Lanxi-菱心体` | `常用字体/汉仪菱心体简.ttf` |
 | 艺术·海报 | `Lanxi-海报体` | `常用字体/华康海报体W12(P).ttf` |
 | 艺术·综艺 | `Lanxi-综艺` | `方正所有字体/02/FZfonts/FZZHYJW.TTF` |
-| 极细·空灵 | `Lanxi-静黑超细` | `造字工房最全字体-2016-01-06更新/黑体系列/MFJingHei_Noncommercial-UltLight.ttf` |
 | 极细·秀美 | `Lanxi-浪倩` | `造字工房最全字体-2016-01-06更新/艺术字体/MFLangQian_Noncommercial-Regular.ttf` |
-| 可爱·萌系 | `Lanxi-喵喵` | `造字工房最全字体-2016-01-06更新/艺术字体/MFMiaoMiao_Noncommercial-Regular.ttf` |
-| 可爱·手绘 | `Lanxi-叮叮` | `造字工房最全字体-2016-01-06更新/手绘字体/MFDingDing_Noncommercial-Regular.ttf` |
-| 可爱·卡通 | `Lanxi-卡通` | `常用字体/迷你简卡通.TTF` |
-| 可爱·手写日记（仅手账/日记/手写场景） | `Lanxi-暗恋初夏` | `少女风/暗恋初夏少女.ttf` |
-| 可爱·标题俏皮（仅手账/日记/手写场景） | `Lanxi-秀英体` | `少女风/汉仪秀英体简-v2.ttf`（v2 为 subset 重建修复版，原文件浏览器无法解析） |
-| 可爱·软萌（仅手账/日记/手写场景） | `Lanxi-初心少女` | `少女风/初心少女体简.ttf` |
-| 可爱·童趣（仅手账/日记/手写场景） | `Lanxi-丫丫体` | `少女风/汉仪丫丫体简.ttf` |
-| 宋体·中正 | `Lanxi-可宋` | `造字工房最全字体-2016-01-06更新/宋体系列/MFKeSong_Noncommercial-Regular.ttf` |
-| 宋体·清朗 | `Lanxi-朗宋` | `造字工房最全字体-2016-01-06更新/宋体系列/MFLangSong_Noncommercial-Regular.ttf` |
-| 宋体·精致 | `Lanxi-品宋` | `造字工房最全字体-2016-01-06更新/宋体系列/MFPinSong_Noncommercial-Regular.ttf` |
-| 宋体·颜韵 | `Lanxi-颜宋` | `造字工房最全字体-2016-01-06更新/宋体系列/MFYanSong_Noncommercial-Regular.ttf` |
-| 冲击·超粗 | `Lanxi-超粗黑` | `方正所有字体/02/FZfonts/FZCCHJW.TTF` |
-| 花体·英文 | `Lanxi-GreatVibes` | `Great-Vibes/GreatVibes-Regular-2.otf` |
-| 书法·行书（刊头首选） | `Lanxi-鱼尾行书` | `新增-2026-08-28/鱼尾书法行书-简体.ttf` |
 | 书法·行书·繁 | `Lanxi-鱼尾行书繁` | `新增-2026-08-28/鱼尾书法行书-繁体.ttf`（繁体字库 · 须配繁体内容） |
 | 书法·狂草 | `Lanxi-狂派手书` | `新增-2026-08-28/Aa狂派手书.ttf` |
 | 书法·江湖 | `Lanxi-狂侠体` | `新增-2026-08-28/Aa狂侠体.ttf` |
 | 篆书·游龙 | `Lanxi-游龙篆书` | `新增-2026-08-28/字魂游龙篆书(商用需授权).ttf` |
 | 篆书·山北 | `Lanxi-山北篆体` | `新增-2026-08-28/依山北篆体.ttf` |
-| 手写·浪漫 | `Lanxi-爱情手写` | `新增-2026-08-28/我会把你叫做爱情.ttf` |
 | 手写·自由 | `Lanxi-自由浪漫` | `新增-2026-08-28/自由浪漫体.ttf` |
 | 手写·胶带 | `Lanxi-修正带灵感` | `新增-2026-08-28/香蕉修正带灵感体.ttf` |
-| 楷书·文人 | `Lanxi-春兰茅坤` | `新增-2026-08-28/Aa今日花青-春兰茅坤.ttf` |
 
 ### 0.3 @font-face 模板（直接抄）
 
