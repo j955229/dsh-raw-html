@@ -4,6 +4,8 @@
 
 ## 0.6.0（当前）
 
+- **字体·少女风四款入库 + maiden-diary 换装（先生 · 2026-08-29 · 淘字体定稿）**：先生新淘 `I:\字体\少女风` 四款（初心少女体/暗恋初夏少女/汉仪丫丫体/汉仪秀英体），定稿分工——正文 `Lanxi-暗恋初夏`（先生实测最接近女孩子手写）、主标题 `Lanxi-秀英体`（粗黑带俏皮边，撑场）、副标题 `Lanxi-初心少女`、装饰 `Lanxi-丫丫体`。落地：①DESIGN.md §0.1 注册四别名；②maiden-diary.md 字体行更新（正文暗恋初夏/标题秀英体/副题初心/装饰丫丫+叮叮）；③styles/_FONTS.md 可爱场景组重排。注：秀英体曾疑似「显示黑体」，已实测 HTTP 200 + 文件内部名「秀英」正确（笔画粗重是其本貌，非加载失败）；重启 DSH 全局注入后再复核。
+
 - **字体·warm-minimal 宋体分工（先生 · 2026-08-29 · 可读性红线续）**：先生实测「`Lanxi-静黑超细` 大面积不可读、只配装饰」，拍板宋体体系——正文 `Lanxi-可宋` 15px（横细竖骨、清晰雅致）、副标题 `Lanxi-品宋`、标题 `Lanxi-朗宋`/`Lanxi-颜宋`（30px 档柔而有骨）、静黑超细退役至装饰层（水印/点缀，禁止承载信息）。落地：①DESIGN.md §0.1 注册 `Lanxi-可宋`/`Lanxi-朗宋` 两别名（parseFontAliasMap 运行时解析 DESIGN.md，重启 DSH 自动注入 @font-face）；②warm-minimal.md 字体元信息/骨架/点睛技法更新（宋体分工即层次）；③styles/_FONTS.md 补「锁定风格正文宋体例外」注解。字体为造字工房非商用（用户自备外置库）。
 
 - **修复·风格卡片主标题单行省略——长名字不再换行成两行（蓝汐 · 2026-08-27 · 先生 UI 细节点名）**：先生指出美学面板风格卡片的主标题（风格名称）长时会换行成两行、且未贴左。根因：`.aes-style-name` 是普通 flex 项，无 `nowrap`/`overflow` 处理——名字超出 flex 剩余宽度即折行（slug 占右端，name 被挤压换行）。修复：`.aes-style-name` 加 `flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;`（单行 + 超长省略号截断，永远一行、靠左），`.aes-style-slug` 加 `flex:none`（固定右端不被挤压）；head 布局不变（左 padding 52px 仍为锁定徽标让位、右 56px 为操作按钮让位）。node --check 通过。重启 DSH + 刷新生效。
