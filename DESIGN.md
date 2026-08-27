@@ -34,7 +34,6 @@
 | 可爱·手绘 | `Lanxi-叮叮` | Lanxi-叮叮.woff2 | 4.21MB |
 | 可爱·萌系 | `Lanxi-喵喵` | Lanxi-喵喵.woff2 | 2.88MB |
 | 手写·文人 | `Lanxi-春兰茅坤` | Lanxi-春兰茅坤.woff2 | 1.73MB |
-| 手写·浪漫 | `Lanxi-爱情手写` | Lanxi-爱情手写.woff2 | 1.78MB |
 | 书法·行书（刊头首选） | `Lanxi-鱼尾行书` | Lanxi-鱼尾行书.woff2 | 3.70MB |
 | 书法·江湖 | `Lanxi-狂侠体` | Lanxi-狂侠体.woff2 | 3.57MB |
 | 少女·手写日记（仅手账场景） | `Lanxi-暗恋初夏` | Lanxi-暗恋初夏.woff2 | 3.25MB |

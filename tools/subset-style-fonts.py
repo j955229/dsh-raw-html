@@ -34,7 +34,6 @@ FONTS = [
     ('Lanxi-喵喵', '造字工房最全字体-2016-01-06更新/艺术字体/MFMiaoMiao_Noncommercial-Regular.ttf'),
     # 手写组（ink-letter / wabi-sabi / wire-news 刊头）
     ('Lanxi-春兰茅坤', '新增-2026-08-28/Aa今日花青-春兰茅坤.ttf'),
-    ('Lanxi-爱情手写', '新增-2026-08-28/我会把你叫做爱情.ttf'),
     ('Lanxi-鱼尾行书', '新增-2026-08-28/鱼尾书法行书-简体.ttf'),
     # 少女风组（maiden-diary）
     ('Lanxi-秀英体', '少女风/汉仪秀英体简-v2.ttf'),

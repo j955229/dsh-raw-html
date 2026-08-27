@@ -4,6 +4,8 @@
 
 ## 0.6.0（当前）
 
+- **移除·Lanxi-爱情手写——名不副实带偏 AI（先生 · 2026-08-29 · 目视定性）**：先生指出「爱情手写」**根本不是手写体**（名不副实，psname WHBNJZAQ），AI 看到名字就当手写体用、效果跑偏，必须删。已清除：①DESIGN.md §0.0 别名行（parseFontAliasMap 不再识别 → AI 候选字体无此名）；②assets/fonts/Lanxi-爱情手写.woff2；③tools/subset-style-fonts.py 清单；④ink-letter / wabi-sabi / _FONTS.md 全部引用替换为 `Lanxi-自由浪漫`（真手写体）；⑤examples/情书·春水笺.html src 同步。**教训入档：字体入库前须目视确认「名实相符」——名字含「手写/书/体」不等于真手写**。
+
 - **机制·12 风格全字体子集化内置——开盖即用（先生 · 2026-08-29 · 拍板「授权没关系、大小可接受」）**：先生问「全部字体打包会不会过大」——蓝汐实测：17 款核心外置 TTF 95.4MB → GB2312 一级子集化 woff2 37.45MB（每款 0.73~4.21MB）；补狂侠体 3.57MB、鱼尾行书繁 7.64MB（全 BMP 保繁体）。**内置字体 7 → 26 款，assets/fonts 55.9MB，随包分发，任何电脑装插件即开盖即用**（parseFontAliasMap + fontExists 自动注入 @font-face）。落地：①`tools/subset-style-fonts.py` + `subset-style-fonts-extra.py` 批量工具入库（子集化顺带修复各字体表长度异常）；②DESIGN.md §0.0 内置表扩至 26 款、§0.1 清除 17 行升级外置行（防后行覆盖）+ 顺带修复 GreatVibes 外置行覆盖内置 woff2 的隐患；③styles/_FONTS.md 措辞同步。包体 12.4 → ~61MB（先生接受）。后续优化方向：GB2312 二级字、标题字体减字符集。
 
 - **修复·秀英体浏览器无法解析——glyf 表长度异常（蓝汐 · 2026-08-29 · 先生实测「只有丫丫体正常」铁证定位）**：先生反馈 `Lanxi-秀英体` 始终显示黑体。排查链：HTTP 200 ✓ → 文件内部名「汉仪秀英体」（HYy1gj）✓ → 隔离实验（裸中文 URL/编码 URL/英文 family 名三变体全黑、丫丫体基线正常）→ **锁定文件本身** → fontTools 全量遍历 7967 glyph 零损坏，但编译时报 `too much 'glyf' table data: expected 3841586, received 3841627 bytes`——**表目录声明的 glyf/hmtx 长度与实际数据不符（多 41 字节）**，Chrome 类浏览器对字体表长度校验极严，解析失败即拒收，fontTools 宽松加载故未发现。修复：fontTools.subset 重建整份字体（保留全部 7571 字符，glyf 长度精确重建），Edge headless 实测 `document.fonts` status=loaded ✓。部署为 `少女风/汉仪秀英体简-v2.ttf`（原文件保留未动），DESIGN.md 路径更新。**经验入档：外置字体入库前先用 fontTools 编译校验表长度，防「fontTools 能读、浏览器拒收」的暗雷**。
