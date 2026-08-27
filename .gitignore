@@ -13,6 +13,11 @@ node_modules/
 # 字体源（80MB，需时从 GitHub 重新下载，见 tools/subset_fonts.py FONTS 清单）
 tools/font-src/
 
+# 字体二进制（不入库；权威位置在字体根目录 I:\字体）
+tools/*.ttf
+tools/*.woff2
+tools/*.otf
+
 # 发布包目录（生成物，由维护者按需整理，不入库）
 release/
 
