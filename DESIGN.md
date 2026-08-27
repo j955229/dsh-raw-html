@@ -49,6 +49,8 @@
 | 可爱·萌系 | `Lanxi-喵喵` | `造字工房最全字体-2016-01-06更新/艺术字体/MFMiaoMiao_Noncommercial-Regular.ttf` |
 | 可爱·手绘 | `Lanxi-叮叮` | `造字工房最全字体-2016-01-06更新/手绘字体/MFDingDing_Noncommercial-Regular.ttf` |
 | 可爱·卡通 | `Lanxi-卡通` | `常用字体/迷你简卡通.TTF` |
+| 宋体·中正 | `Lanxi-可宋` | `造字工房最全字体-2016-01-06更新/宋体系列/MFKeSong_Noncommercial-Regular.ttf` |
+| 宋体·清朗 | `Lanxi-朗宋` | `造字工房最全字体-2016-01-06更新/宋体系列/MFLangSong_Noncommercial-Regular.ttf` |
 | 宋体·精致 | `Lanxi-品宋` | `造字工房最全字体-2016-01-06更新/宋体系列/MFPinSong_Noncommercial-Regular.ttf` |
 | 宋体·颜韵 | `Lanxi-颜宋` | `造字工房最全字体-2016-01-06更新/宋体系列/MFYanSong_Noncommercial-Regular.ttf` |
 | 冲击·超粗 | `Lanxi-超粗黑` | `方正所有字体/02/FZfonts/FZCCHJW.TTF` |

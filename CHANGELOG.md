@@ -4,6 +4,8 @@
 
 ## 0.6.0（当前）
 
+- **字体·warm-minimal 宋体分工（先生 · 2026-08-29 · 可读性红线续）**：先生实测「`Lanxi-静黑超细` 大面积不可读、只配装饰」，拍板宋体体系——正文 `Lanxi-可宋` 15px（横细竖骨、清晰雅致）、副标题 `Lanxi-品宋`、标题 `Lanxi-朗宋`/`Lanxi-颜宋`（30px 档柔而有骨）、静黑超细退役至装饰层（水印/点缀，禁止承载信息）。落地：①DESIGN.md §0.1 注册 `Lanxi-可宋`/`Lanxi-朗宋` 两别名（parseFontAliasMap 运行时解析 DESIGN.md，重启 DSH 自动注入 @font-face）；②warm-minimal.md 字体元信息/骨架/点睛技法更新（宋体分工即层次）；③styles/_FONTS.md 补「锁定风格正文宋体例外」注解。字体为造字工房非商用（用户自备外置库）。
+
 - **修复·风格卡片主标题单行省略——长名字不再换行成两行（蓝汐 · 2026-08-27 · 先生 UI 细节点名）**：先生指出美学面板风格卡片的主标题（风格名称）长时会换行成两行、且未贴左。根因：`.aes-style-name` 是普通 flex 项，无 `nowrap`/`overflow` 处理——名字超出 flex 剩余宽度即折行（slug 占右端，name 被挤压换行）。修复：`.aes-style-name` 加 `flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;`（单行 + 超长省略号截断，永远一行、靠左），`.aes-style-slug` 加 `flex:none`（固定右端不被挤压）；head 布局不变（左 padding 52px 仍为锁定徽标让位、右 56px 为操作按钮让位）。node --check 通过。重启 DSH + 刷新生效。
 
 - **机制·字体菜单滚动懒加载——214MB 全量预加载改可见才加载（蓝汐 · 2026-08-27 · 先生定调「试试滚动加载」）**：先生问「全量加载耗费什么、滚动快不快」——蓝汐实测 I:\字体：**33 款已装字体共 213.9MB**（狂派手书 42.8MB / 游龙篆书 22.9MB / 爱情手写 12MB 等，>3MB 的 24 款），全量 `fonts.load` 会一次性下载 214MB 且**内存驻留到页面刷新**（最大耗费）。修复：字体分类添加器菜单（aesFontCategory 的 buildMenu）**去掉全量预加载循环**，改为 **IntersectionObserver 滚动懒加载**——菜单项滚动到可见（root=菜单滚动容器 + rootMargin 60px 提前预载）才 `aesEnsureFontFace`，内存从 214MB 降到「只看过的字体」（首屏 6~8 项 ≈ 几十 MB）；菜单每次重建 disconnect 旧观察器重新 observe（搜索过滤/重新打开安全）；无 IntersectionObserver 的旧浏览器降级全量预加载（原行为）。**「再次打开不再加载」回答先生**：同页面会话内已加载字体驻留 `document.fonts`，再次打开面板 `fonts.load` 立即命中（零下载）；刷新页面后字体文件走 HTTP 缓存（磁盘读取，不重新网络下载 214MB）。node --check 通过。重启 DSH + 刷新生效。
