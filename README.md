@@ -159,3 +159,20 @@ dsh plugin --profile web remove dsh-raw-html
 （React 元素渲染天然不执行 script；事件只放开 `onclick="input('...')"` 受控通道；
 `script/iframe/object/embed` 与 `javascript:` 协议丢弃），但样式与外部图片仍然可达——
 请只对可信模型开启。
+
+## 可信模式（Trusted Mode · 补丁 v7.1）
+
+> 先生定调 2026-08-29：本会话为**双人私密会话**，内容由双方共同产出、双方可信——
+> 公共论坛的存储型 XSS 威胁模型不适用。因此为「正文可执行脚本」提供显式开关。
+
+- **默认关闭（安全默认）**：未开启时行为与旧版完全一致（script 截断、白名单严格）。
+- **开启方式**：页面右下角「盾锁 SVG 徽章 · 可信模式·关」一键开启（写入 `localStorage['raw-html.trusted']='1'` 并刷新）；
+  或 DevTools 设置 `localStorage.setItem('raw-html.trusted','1')`；或 `window.__DSH_TRUSTED__=true`。
+  徽章图标为内联 SVG 盾锁（先生 2026-08-29 定稿方案 A）：关态=盾+锁孔，开态=盾+对勾。
+- **开启后放行**：消息正文 `<script>` 被提取并在渲染完成后执行（WebGL/Shader/fetch 由此解锁）；
+  `iframe/object/embed` 放行；`on*` 事件属性放行；`href/src` 白名单放宽（`blob:` 可用）。
+  仍拒绝：`javascript:` 协议。
+- **机制**：闭合 `<script>` 在解析阶段被提取出 vdom（不依赖 React 对 script 元素的行为），
+  消息渲染完成后统一执行一次；流式中未闭合的脚本不执行（等完整闭合）。
+- **测试**：`tests/trusted.test.mjs`（13 项断言，含默认关闭回归）。
+- **回退**：徽章再点一次即关闭；或 `localStorage.setItem('raw-html.trusted','0')`。

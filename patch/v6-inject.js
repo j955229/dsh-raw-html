@@ -94,6 +94,95 @@
     var fn = typeof hp === 'function' ? hp : (typeof jd === 'function' ? jd : (typeof Sd === 'function' ? Sd : null))
     return fn ? fn(s) : {}
   }
+  // ---- 可信模式（Trusted Mode）v7.1 · 先生定调 2026-08-29 ----
+  // 双人私密会话内容双方可信 → 正文可放行 script（WebGL/Shader/fetch 由此解锁）。
+  // 开关：localStorage['raw-html.trusted']==='1' 或 window.__DSH_TRUSTED__===true。
+  // 默认关闭：未开启时行为与旧版完全一致（script 截断、URL 白名单严格）。
+  // 机制：闭合 <script> 在 parseFrag 阶段被提取出 vdom，消息渲染完成后统一 eval 执行
+  // （不依赖 React 对 script 元素的执行行为，确定性一次执行）。
+  function isTrusted() {
+    try {
+      if (window.__DSH_TRUSTED__ === true) return true
+      if (typeof localStorage !== 'undefined' && localStorage.getItem('raw-html.trusted') === '1') return true
+    } catch (e) {}
+    return false
+  }
+  var _trustedQueue = []
+  var _trustedSeq = 0
+  function extractTrustedScripts(html) {
+    if (!isTrusted() || html.indexOf('<script') === -1) return html
+    return html.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gi, function (m, code) {
+      _trustedQueue.push({ id: 's' + (++_trustedSeq), code: code })
+      return ''
+    })
+  }
+  function decodeEntities(s) {
+    if (!s || s.indexOf('&') === -1) return s
+    if (typeof document === 'undefined') return s
+    var ta = document.createElement('textarea')
+    ta.innerHTML = s
+    return ta.value
+  }
+  // 多时机执行 + 幂等：setTimeout(0) 可能在 React 挂载前（历史重渲染尤甚），
+  // rAF 两帧 + 500ms 兜底保证至少一次在 DOM 就绪后执行；window.__vcpTrustedRan
+  // 记录已执行 id，重复调用自动跳过（先生 2026-08-29 实测：黑洞脚本在历史
+  // 重渲染时静默退出，根因即 DOM 未挂载 + 单次执行时机过早）
+  function flushTrustedScripts() {
+    if (!_trustedQueue.length) return
+    var q = _trustedQueue
+    _trustedQueue = []
+    var w = window.__vcpTrustedRan || (window.__vcpTrustedRan = [])
+    function exec() {
+      for (var i = 0; i < q.length; i++) {
+        var id = q[i].id
+        if (w.indexOf(id) !== -1) continue
+        w.push(id)
+        try { (0, eval)(decodeEntities(q[i].code)) } catch (e) { if (typeof console !== 'undefined') console.error('[vcp-trusted] script 执行失败:', e) }
+      }
+    }
+    if (typeof setTimeout === 'function') setTimeout(exec, 0)
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(function () { setTimeout(exec, 0) })
+      requestAnimationFrame(function () { setTimeout(exec, 20) })
+    }
+    if (typeof setTimeout === 'function') setTimeout(exec, 500)
+  }
+  // 页面右下角可信模式开关徽章（先生一键开启，无需 DevTools）
+  function installTrustedToggle() {
+    if (window.__vcpTrustedToggle) return
+    window.__vcpTrustedToggle = true
+    var mount = function () {
+      if (typeof document === 'undefined' || !document.body) return false
+      var el = document.getElementById('vcp-trusted-toggle')
+      if (!el) {
+        el = document.createElement('div')
+        el.id = 'vcp-trusted-toggle'
+        el.style.cssText = 'position:fixed;right:14px;bottom:14px;z-index:900;padding:6px 12px;border-radius:999px;font-size:12px;letter-spacing:1px;cursor:pointer;font-family:system-ui,sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.35);user-select:none;'
+        document.body.appendChild(el)
+        el.addEventListener('click', function () {
+          try {
+            localStorage.setItem('raw-html.trusted', isTrusted() ? '0' : '1')
+          } catch (e) {}
+          location.reload()
+        })
+      }
+      var on = isTrusted()
+      // 方案 A · 盾锁（先生 2026-08-29 定稿）：关=盾+锁孔，开=盾+对勾
+      var icon = on
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;display:inline-block;vertical-align:-2px;margin-right:5px"><path d="M12 2.8 19.4 5.6v5.6c0 5-3.1 8.4-7.4 10.2C7.7 19.6 4.6 16.2 4.6 11.2V5.6Z"/><path d="m8.8 11.2 2.2 2.2 4.2-4.4"/></svg>'
+        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;display:inline-block;vertical-align:-2px;margin-right:5px"><path d="M12 2.8 19.4 5.6v5.6c0 5-3.1 8.4-7.4 10.2C7.7 19.6 4.6 16.2 4.6 11.2V5.6Z"/><circle cx="12" cy="10.6" r="2.2"/><path d="M12 12.8V15"/></svg>'
+      el.innerHTML = icon + (on ? '可信模式·开' : '可信模式·关')
+      el.style.background = on ? 'rgba(110,231,183,.92)' : 'rgba(96,165,250,.4)'
+      el.style.color = on ? '#052e16' : '#dff0ff'
+      el.style.border = on ? '1px solid #34d399' : '1px solid rgba(96,165,250,.55)'
+      return true
+    }
+    if (mount()) return
+    if (typeof setInterval === 'undefined') return
+    var iv = setInterval(function () { if (mount()) clearInterval(iv) }, 400)
+    setTimeout(function () { clearInterval(iv) }, 10000)
+  }
+
   var F = window.__vcpFast || (window.__vcpFast = {
     c: new Map(),           // 整串缓存（v → 元素）
     open: null,             // 当前未闭合容器 { raw, end, props, tag }
@@ -549,6 +638,7 @@
   function parseFrag(html, isTail) {
     if (!html) return null
     html = escapeUnclosedRawtext(html, isTail)
+    html = extractTrustedScripts(html)
     if (isTail) {
       // 流式 tail：未闭合的 <style> 补闭合 + 平衡花括号——CSS 规则块（#id{...}）
       // 在流式中「{」已开「}」未写时被浏览器整体丢弃，背景/字体仍要等整块写完才
@@ -604,7 +694,7 @@
       var props = {}
       for (var ci = 0; ci < el.attributes.length; ci++) {
         var c = el.attributes[ci]
-        if (/^on/i.test(c.name)) continue
+        if (/^on/i.test(c.name)) { if (!isTrusted()) continue; props[c.name] = c.value; continue }
         if (c.name === 'style') {
           var sv = c.value
             .replace(/position\s*:\s*fixed\s*;?/gi, '')
@@ -626,9 +716,10 @@
           continue
         }
         if (c.name === 'class') { props.className = c.value; continue }
-        if (c.name === 'href' && !/^(https?:|mailto:|\/|#)/i.test(c.value)) continue
-        if (c.name === 'src' && !/^(https?:|data:image\/|\/|#)/i.test(c.value)) continue
-        if ((c.name === 'action' || c.name === 'formaction' || c.name === 'xlink:href') && !/^(https?:|mailto:|\/|#)/i.test(c.value)) continue
+        if (c.name === 'href' && !isTrusted() && !/^(https?:|mailto:|\/|#)/i.test(c.value)) continue
+        if (c.name === 'src' && !isTrusted() && !/^(https?:|data:image\/|\/|#)/i.test(c.value)) continue
+        if ((c.name === 'action' || c.name === 'formaction' || c.name === 'xlink:href') && !isTrusted() && !/^(https?:|mailto:|\/|#)/i.test(c.value)) continue
+        if (isTrusted() && (c.name === 'href' || c.name === 'src' || c.name === 'action' || c.name === 'formaction' || c.name === 'xlink:href') && /^\s*javascript:/i.test(c.value)) continue
         props[c.name] = c.value
       }
       return { tag: el.localName, props: props }
@@ -943,6 +1034,7 @@
       if (streaming) scheduleMath()
       F.c.set((streaming ? 's:' : 'f:') + v, R)
     }
+    flushTrustedScripts()
     return R
   }
 
@@ -1813,5 +1905,7 @@
   }
 
   window.__vcpStable = { render: render, fixBlank: fixVcpBlank, _test: { collectTextSelectors: collectTextSelectors, enforceFontChain: enforceFontChain, healSvgAnimation: healSvgAnimation } }
+  window.__vcpTrusted = isTrusted
+  installTrustedToggle()
 })()
 /*__DSH_V6_INJECT_END__*/

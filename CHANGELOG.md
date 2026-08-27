@@ -2,6 +2,10 @@
 
 本文件记录插件版本（`package.json` 的 `version`）与补丁代号（`patch/*` 注入模块）两条线的演进。
 
+## 0.6.1（补丁 v7.1 · 可信模式）
+
+- **可信模式（Trusted Mode · 先生定调 2026-08-29）**：双人私密会话内容可信，正文可放行脚本——① `patch/v6-inject.js` 新增 `isTrusted()`（`localStorage['raw-html.trusted']==='1'` 或 `window.__DSH_TRUSTED__===true`）；② 闭合 `<script>` 在 parseFrag 阶段提取出 vdom，消息渲染完成后统一执行一次（`flushTrustedScripts`，不依赖 React 对 script 元素的行为，含 HTML 实体解码）；③ `parseOpen` 属性过滤按可信模式放宽：`on*` 放行、`href/src` 白名单放宽（`blob:` 可用、`javascript:` 仍拒）；④ `patch/trusted-patch.cjs` 将 bundle 中 vc() 的 `script/iframe/object/embed` 硬过滤改为可信条件过滤；⑤ 页面右下角「可信模式」徽章一键开关（默认关闭 = 旧行为完全一致）。部署：`node patch/patch-frontend.cjs` + `node patch/trusted-patch.cjs`；测试 `tests/trusted.test.mjs`（13 断言）；全套回归 307 断言全绿。
+
 ## 0.6.0（当前）
 
 - **移除·Lanxi-爱情手写——名不副实带偏 AI（先生 · 2026-08-29 · 目视定性）**：先生指出「爱情手写」**根本不是手写体**（名不副实，psname WHBNJZAQ），AI 看到名字就当手写体用、效果跑偏，必须删。已清除：①DESIGN.md §0.0 别名行（parseFontAliasMap 不再识别 → AI 候选字体无此名）；②assets/fonts/Lanxi-爱情手写.woff2；③tools/subset-style-fonts.py 清单；④ink-letter / wabi-sabi / _FONTS.md 全部引用替换为 `Lanxi-自由浪漫`（真手写体）；⑤examples/情书·春水笺.html src 同步。**教训入档：字体入库前须目视确认「名实相符」——名字含「手写/书/体」不等于真手写**。
