@@ -81,6 +81,11 @@ ok('src: data:image 放行', () => assert.equal(allowSrc('data:image/svg+xml;bas
 ok('src: data:text/html 拦截', () => assert.equal(allowSrc('data:text/html,<b>x</b>'), false))
 ok('src: blob 拦截', () => assert.equal(allowSrc('blob:https://x'), false))
 ok('src: file 拦截', () => assert.equal(allowSrc('file:///etc/passwd'), false))
+function allowNav(v) { return /^(https?:|mailto:|\/|#)/i.test(v) }
+ok('nav: formaction https 放行', () => assert.equal(allowNav('https://api.example.com/submit'), true))
+ok('nav: xlink 相对路径放行', () => assert.equal(allowNav('/submit'), true))
+ok('nav: action javascript 拦截', () => assert.equal(allowNav('javascript:alert(1)'), false))
+ok('nav: formaction data 拦截', () => assert.equal(allowNav('data:text/html,x'), false))
 
 console.log('== 5. on* 事件属性过滤（只放行 onclick 桥接，其余 on* 拒收）==')
 // parseOpen（容器开标签 / 根标签）：所有 on* 一律丢弃
@@ -152,6 +157,7 @@ const RULES = [
   ['href 白名单', 'https?:|mailto:'],
   ['src 白名单 data:image', 'data:image'],
   ['on* 事件过滤', '/^on/i.test(c.name)'],
+  ['formaction 白名单', 'formaction'],
 ]
 for (const [label, needle] of RULES) {
   ok(label + '（两处一致）', () => {

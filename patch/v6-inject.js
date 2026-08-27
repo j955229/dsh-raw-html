@@ -628,6 +628,7 @@
         if (c.name === 'class') { props.className = c.value; continue }
         if (c.name === 'href' && !/^(https?:|mailto:|\/|#)/i.test(c.value)) continue
         if (c.name === 'src' && !/^(https?:|data:image\/|\/|#)/i.test(c.value)) continue
+        if ((c.name === 'action' || c.name === 'formaction' || c.name === 'xlink:href') && !/^(https?:|mailto:|\/|#)/i.test(c.value)) continue
         props[c.name] = c.value
       }
       return { tag: el.localName, props: props }
@@ -1088,7 +1089,7 @@
       scheduleMath()
       ensureStreamingNoFollow()
       F.c.set(key, R)
-      if (F.c.size > CACHE_MAX) F.c.clear()
+      if (F.c.size > CACHE_MAX) F.c.delete(F.c.keys().next().value) // LRU：逐出最旧一条（Map 插入序）
     }
     F.last = v; F.el = R; F.builds++
     if (t0) {
@@ -1502,12 +1503,9 @@
                 // 渲染结果缓存：源码 → SVG HTML（流式中 React 重建后直接恢复，免重解析）
                 if (cacheSrc) {
                   var cache = window.__vcpMermaidCache || (window.__vcpMermaidCache = {})
-                  var ck = Object.keys(cache)
-                  if (ck.length > MERMAID_CACHE_MAX) {
-                    cache = {}
-                    window.__vcpMermaidCache = cache
-                  }
                   cache[cacheSrc] = el.innerHTML
+                  var ck = Object.keys(cache)
+                  if (ck.length > MERMAID_CACHE_MAX) delete cache[ck[0]] // LRU：逐出最旧一条（字符串 key 插入序）
                 }
                 // 缩放工具栏（- / 100% / + / 适应）
                 enhanceMermaid(el)
