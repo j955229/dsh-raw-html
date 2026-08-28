@@ -2,6 +2,14 @@
 
 本文件记录插件版本（`package.json` 的 `version`）与补丁代号（`patch/*` 注入模块）两条线的演进。
 
+## 0.6.2（补丁 v7.2 · 可信模式插件化）
+
+- **机制·可信模式迁入插件 client 层——随插件启停（先生 · 2026-08-28 · 追问「停用插件为何还能开关可信模式」）**：先生发现停用 dsh-raw-html 后主界面右下角「可信模式」徽章依然可开关。根因：可信模式全套代码（`isTrusted()`/徽章/`flushTrustedScripts`）焊死在 `patch/v6-inject.js`，由补丁脚本**直接改写主 bundle**（`dsh-web-frontend/dist/assets/index-*.js`），不经插件加载机制——停用插件只撤销插件注册层（`</>` 按钮），bundle 物理修改原封不动。改造：①`lib/client.js` 新增可信模式模块——`isTrusted()`（localStorage/`__DSH_TRUSTED__`）、`window.__vcpTrusted` 定义、右下角盾锁徽章 `installTrustedToggle()`（加载即挂，随插件加载/卸载）；②`patch/v6-inject.js` 的 `isTrusted()` 改为**防御式调用** `window.__vcpTrusted`（未定义→false=安全默认），删除徽章与 `window.__vcpTrusted` 定义，脚本提取/执行（`extractTrustedScripts`/`flushTrustedScripts`）保留但被守卫；③`patch/trusted-patch.cjs` 的 vc() 条件过滤本就是防御式调用，无需改动；④`patch/update-v6-inject.cjs` 支持 `/*__DSH_V6_INJECT_START__*/`/`END` 新标记定位（兼容旧 `dsh-raw-html v6` 标记）。效果：**安装插件 = 可信模式可用；停用插件 = 徽章消失、vc/parseOpen 放行全部回收（安全默认）**；其他用户安装插件后开关层即插即用（执行载体仍需一次性补丁注入渲染能力）。测试 `tests/trusted.test.mjs` 重写为 v7.2 架构（21 断言，覆盖渲染层防御式调用/插件层状态/徽章切换/联动）；全套回归 315 断言全绿。
+
+## 0.6.3（补丁 v7.2 · 正文标签名截断事故）
+
+- **事故·正文含字面标签名被渲染层截断（先生 · 2026-08-29 · 弹球演示实测反馈）**：先生要求演示可信模式，蓝汐在正文里写了 Markdown 反引号代码 `` `<script>` `` 描述机制——经主 markdown 渲染器输出为**字面开标签文本**（未闭合），VCP 扫描器将其当作未闭合的 script 开标签，触发防御性截断（`patch/v6-inject.js`：script 内容转 `\u0000` 截断丢弃 + 「其后没有闭合标签」的 script 开标签防御），正文从该处起全部消失。**铁律：消息正文（含卡片 HTML 之外的所有文字）禁止出现字面标签名**——需要提及标签时写 HTML 实体 `` `&lt;script&gt;` ``（代码 span 内实体不解析、显示为字面）或中文描述（「script 标签」「脚本标签」）；此铁律与卡片内真实 `<script>`（可信模式演示用）不冲突。意义：安全机制宁可误伤不放过，拦截生效。
+
 ## 0.6.1（补丁 v7.1 · 可信模式）
 
 - **可信模式（Trusted Mode · 先生定调 2026-08-29）**：双人私密会话内容可信，正文可放行脚本——① `patch/v6-inject.js` 新增 `isTrusted()`（`localStorage['raw-html.trusted']==='1'` 或 `window.__DSH_TRUSTED__===true`）；② 闭合 `<script>` 在 parseFrag 阶段提取出 vdom，消息渲染完成后统一执行一次（`flushTrustedScripts`，不依赖 React 对 script 元素的行为，含 HTML 实体解码）；③ `parseOpen` 属性过滤按可信模式放宽：`on*` 放行、`href/src` 白名单放宽（`blob:` 可用、`javascript:` 仍拒）；④ `patch/trusted-patch.cjs` 将 bundle 中 vc() 的 `script/iframe/object/embed` 硬过滤改为可信条件过滤；⑤ 页面右下角「可信模式」徽章一键开关（默认关闭 = 旧行为完全一致）。部署：`node patch/patch-frontend.cjs` + `node patch/trusted-patch.cjs`；测试 `tests/trusted.test.mjs`（13 断言）；全套回归 307 断言全绿。

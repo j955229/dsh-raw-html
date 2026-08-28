@@ -160,7 +160,7 @@ dsh plugin --profile web remove dsh-raw-html
 `script/iframe/object/embed` 与 `javascript:` 协议丢弃），但样式与外部图片仍然可达——
 请只对可信模型开启。
 
-## 可信模式（Trusted Mode · 补丁 v7.1）
+## 可信模式（Trusted Mode · v7.2 插件化）
 
 > 先生定调 2026-08-29：本会话为**双人私密会话**，内容由双方共同产出、双方可信——
 > 公共论坛的存储型 XSS 威胁模型不适用。因此为「正文可执行脚本」提供显式开关。
@@ -174,5 +174,16 @@ dsh plugin --profile web remove dsh-raw-html
   仍拒绝：`javascript:` 协议。
 - **机制**：闭合 `<script>` 在解析阶段被提取出 vdom（不依赖 React 对 script 元素的行为），
   消息渲染完成后统一执行一次；流式中未闭合的脚本不执行（等完整闭合）。
-- **测试**：`tests/trusted.test.mjs`（13 项断言，含默认关闭回归）。
+- **v7.2 插件化（先生定调）**：可信模式的**状态与开关 UI 全部迁入插件 client 层**
+  （`lib/client.js`）——`isTrusted()`、`window.__vcpTrusted` 定义、右下角徽章。
+  主 bundle 渲染层（v6-inject 的 `isTrusted` / vc 条件过滤）对 `window.__vcpTrusted`
+  **一律防御式调用**：插件未加载（停用）→ 自动 `false` → 行为与旧版一致（安全默认）。
+  因此：**安装插件 = 可信模式可用；停用插件 = 徽章消失、放行全部回收**。
+  其他用户安装本插件后同样即插即用（可信模式开关层不依赖手工补丁）。
+- **注意**：可信模式的**执行载体**（脚本提取 `extractTrustedScripts` / 执行 `flushTrustedScripts` /
+  vc 放行）位于主 bundle 的 v6 渲染模块中，仍由一次性 `install-v6.cjs` + `trusted-patch.cjs`
+  注入——即「HTML 渲染能力」本身需要补丁安装；开关与状态层随插件。未跑补丁的用户
+  装插件只有开关 UI，渲染能力不生效（详见「安装」章节）。
+- **测试**：`tests/trusted.test.mjs`（21 项断言，覆盖默认关闭回归、插件层状态、
+  徽章切换、渲染层防御式调用与联动）。
 - **回退**：徽章再点一次即关闭；或 `localStorage.setItem('raw-html.trusted','0')`。

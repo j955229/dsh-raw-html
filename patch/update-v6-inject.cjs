@@ -52,14 +52,22 @@ try {
   process.exit(1)
 }
 
-// 定位旧模块边界
-const marker = t.indexOf('dsh-raw-html v6')
-if (marker === -1) {
-  console.error('[v6u] bundle 中未找到 v6 模块（尚未注入？请先跑 patch-frontend.cjs）')
-  process.exit(1)
+// 定位旧模块边界（优先新格式 START/END 标记，兼容旧格式 dsh-raw-html v6 注释头）
+const END_MARK = '/*__DSH_V6_INJECT_END__*/'
+const marker = t.indexOf('/*__DSH_V6_INJECT_START__*/')
+let modStart = -1
+let vcDef = -1
+if (marker !== -1) {
+  modStart = marker
+  const endIdx = t.indexOf(END_MARK, modStart)
+  if (endIdx !== -1) vcDef = endIdx + END_MARK.length
+} else {
+  const legacy = t.indexOf('dsh-raw-html v6')
+  if (legacy !== -1) {
+    modStart = t.lastIndexOf('/**', legacy)
+    vcDef = t.indexOf(';function vc(n,r){')
+  }
 }
-const modStart = t.lastIndexOf('/**', marker)
-const vcDef = t.indexOf(';function vc(n,r){')
 if (modStart === -1 || vcDef === -1 || vcDef <= modStart) {
   console.error('[v6u] 边界定位失败（modStart=%d vcDef=%d），中止', modStart, vcDef)
   process.exit(1)

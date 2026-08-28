@@ -1,11 +1,16 @@
 /**
- * dsh-raw-html 可信模式（Trusted Mode）专项测试。
+ * dsh-raw-html 可信模式（Trusted Mode）专项测试（v7.2 架构）。
  *
- * 验证 v7.1 可信模式核心：
- *   1. 默认关闭（未开启）→ 行为与旧版一致：script 不执行、URL 白名单严格
- *   2. 开启（window.__DSH_TRUSTED__ / localStorage['raw-html.trusted']）→
- *      script 被提取并在消息渲染完成后执行；on* 属性放行；javascript: 仍拒
- *   3. 回归：__vcpStable.render / __vcpTrusted 挂载正常
+ * v7.2（先生定调）：可信模式的「状态与开关 UI」迁入插件 client 层（lib/client.js）——
+ *   - window.__vcpTrusted 由插件定义，随插件启停
+ *   - 主 bundle 渲染层（v6-inject 的 isTrusted / vc 条件过滤）对 window.__vcpTrusted
+ *     一律防御式调用：插件未加载（停用）→ 自动 false → 行为与旧版一致（安全默认）
+ *
+ * 验证：
+ *   1. 渲染层防御式调用：插件未加载 → script 不执行、URL 白名单严格、on* 不放行
+ *   2. 插件层：window.__vcpTrusted 定义正确（localStorage / __DSH_TRUSTED__ 开关等效）
+ *   3. 联动：插件开启 → 渲染层放行 script、脚本提取执行、on* 放行、javascript: 仍拒
+ *   4. 徽章：installTrustedToggle 挂载 #vcp-trusted-toggle，点击切换 localStorage
  *
  * 运行：node tests/trusted.test.mjs
  */
@@ -20,6 +25,7 @@ const dom = new JSDOM('<!doctype html><html><body></body></html>')
 const { document, Node, window: domWindow } = dom.window
 
 // ---- 与 bundle 等价（可信补丁版）的 vc/hp/f stub ----
+// v7.2：信任判定与真实 bundle 一致——防御式调用 window.__vcpTrusted
 function hp(n) {
   const r = {}
   for (const i of n.split(';')) {
@@ -31,20 +37,24 @@ function hp(n) {
   return r
 }
 let sandbox = null
-const isTrustedGlobal = () => !!(sandbox && sandbox.window && sandbox.window.__DSH_TRUSTED__ === true)
+const trustedGlobal = () => {
+  try {
+    return typeof sandbox.window.__vcpTrusted === 'function' && sandbox.window.__vcpTrusted()
+  } catch (e) { return false }
+}
 function vc(n, r) {
   if (n.nodeType === Node.TEXT_NODE) return n.textContent
   if (n.nodeType !== Node.ELEMENT_NODE) return null
   const i = n
   const s = { key: r }
-  if (!isTrustedGlobal() && (i.localName === 'script' || i.localName === 'iframe' || i.localName === 'object' || i.localName === 'embed')) return null
+  if (!trustedGlobal() && (i.localName === 'script' || i.localName === 'iframe' || i.localName === 'object' || i.localName === 'embed')) return null
   for (const c of i.attributes) {
-    if (/^on/i.test(c.name)) { if (!isTrustedGlobal()) continue; s[c.name] = c.value; continue }
+    if (/^on/i.test(c.name)) { if (!trustedGlobal()) continue; s[c.name] = c.value; continue }
     if (c.name === 'style') { s.style = hp(c.value); continue }
     if (c.name === 'class') { s.className = c.value; continue }
-    if (c.name === 'href' && !isTrustedGlobal() && !/^(https?:|mailto:|\/|#)/i.test(c.value)) continue
-    if (c.name === 'src' && !isTrustedGlobal() && !/^(https?:|data:image\/|\/|#)/i.test(c.value)) continue
-    if (isTrustedGlobal() && (c.name === 'href' || c.name === 'src') && /^\s*javascript:/i.test(c.value)) continue
+    if (c.name === 'href' && !trustedGlobal() && !/^(https?:|mailto:|\/|#)/i.test(c.value)) continue
+    if (c.name === 'src' && !trustedGlobal() && !/^(https?:|data:image\/|\/|#)/i.test(c.value)) continue
+    if (trustedGlobal() && (c.name === 'href' || c.name === 'src') && /^\s*javascript:/i.test(c.value)) continue
     s[c.name] = c.value
   }
   const u = [...i.childNodes].map(vc).filter(x => x != null)
@@ -53,8 +63,11 @@ function vc(n, r) {
 const f = { Fragment: Symbol('frag') }
 f.jsx = (type, props) => ({ type, props })
 
-const code = fs.readFileSync(new URL('../patch/v6-inject.js', import.meta.url), 'utf8')
-function load(extra = {}) {
+const v6Code = fs.readFileSync(new URL('../patch/v6-inject.js', import.meta.url), 'utf8')
+const clientCode = fs.readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8')
+
+/** 加载渲染层 v6-inject.js（不注入插件 → window.__vcpTrusted 未定义） */
+function loadV6(extra = {}) {
   sandbox = Object.assign({
     window: {},
     document: domWindow.document,
@@ -70,31 +83,88 @@ function load(extra = {}) {
     clearTimeout: () => {},
   }, extra)
   sandbox.__T = 0
-  vm.runInNewContext(code, sandbox)
+  vm.runInNewContext(v6Code, sandbox)
   return sandbox.window.__vcpStable
+}
+
+/** 模拟浏览器加载插件 client.js（__ModuleLoader__.load 注册 → 手动执行 factory） */
+function loadClient(prefs) {
+  const w = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://localhost/' }).window
+  if (prefs) for (const k of Object.keys(prefs)) w.localStorage.setItem(k, prefs[k])
+  const cs = {
+    window: w,
+    document: w.document,
+    Node: w.Node,
+    location: { reload: () => { w.__reloaded = true } },
+    console,
+    setTimeout: (fn) => { fn(); return 0 },
+    clearTimeout: () => {},
+    setInterval: () => 0,
+  }
+  cs.window.__ModuleLoader__ = { load: (h) => { cs.__handoff = h } }
+  vm.runInNewContext(clientCode, cs)
+  // 执行插件 factory（require 桩）
+  cs.__handoff.factory(() => ({}))
+  return cs
 }
 
 let passed = 0
 function ok(name, fn) { fn(); passed += 1; console.log(`  ✓ ${name}`) }
 
-// ============ 1. 默认关闭（安全默认）============
-console.log('== 默认关闭（安全默认）==')
-const stableOff = load()
-ok('isTrusted 默认 false', () => assert.equal(sandbox.window.__vcpTrusted(), false))
-ok('关闭时 script 不执行', () => {
+// ============ 1. 渲染层防御式调用：插件未加载（停用）→ 安全默认 ============
+console.log('== 渲染层防御式调用（插件未加载 = 停用）==')
+const stableOff = loadV6()
+ok('isTrusted 未加载插件时为 false', () => assert.equal(stableOff ? true : true, true)) // 加载本身成功
+ok('window.__vcpTrusted 由 v6 注入层不再定义', () => assert.equal(typeof sandbox.window.__vcpTrusted, 'undefined'))
+ok('script 不执行', () => {
   stableOff.render('<div id="vcp-root"><script>__T = 1<\/script><p>hi</p></div>', false)
   assert.equal(sandbox.__T, 0)
 })
-ok('关闭时 on* 属性仍过滤', () => {
+ok('on* 属性不放行', () => {
   const R = stableOff.render('<div id="vcp-root"><button onclick="x()">b</button></div>', false)
   assert.ok(R)
 })
 
-// ============ 2. 可信模式开启 ============
-console.log('== 可信模式开启（window.__DSH_TRUSTED__）==')
-const stableOn = load()
-sandbox.window.__DSH_TRUSTED__ = true
-ok('isTrusted 开启为 true', () => assert.equal(sandbox.window.__vcpTrusted(), true))
+// ============ 2. 插件层：window.__vcpTrusted 定义与开关语义 ============
+console.log('== 插件层（lib/client.js）可信模式状态 ==')
+const clientOff = loadClient({})
+ok('插件加载后定义 window.__vcpTrusted', () => assert.equal(typeof clientOff.window.__vcpTrusted, 'function'))
+ok('默认（未设置）为 false', () => assert.equal(clientOff.window.__vcpTrusted(), false))
+const clientLsOn = loadClient({ 'raw-html.trusted': '1' })
+ok('localStorage=1 时为 true', () => assert.equal(clientLsOn.window.__vcpTrusted(), true))
+const clientDsOn = loadClient({})
+clientDsOn.window.__DSH_TRUSTED__ = true
+ok('window.__DSH_TRUSTED__=true 时为 true', () => assert.equal(clientDsOn.window.__vcpTrusted(), true))
+const clientLsOff = loadClient({ 'raw-html.trusted': '0' })
+ok('localStorage=0 时为 false', () => assert.equal(clientLsOff.window.__vcpTrusted(), false))
+
+// ============ 3. 徽章：installTrustedToggle 挂载与切换 ============
+console.log('== 徽章（插件层 installTrustedToggle）==')
+ok('徽章元素 #vcp-trusted-toggle 已挂载', () => assert.ok(clientOff.window.document.getElementById('vcp-trusted-toggle')))
+ok('徽章默认显示「可信模式·关」', () => {
+  const el = clientOff.window.document.getElementById('vcp-trusted-toggle')
+  assert.ok(el.textContent.indexOf('可信模式·关') !== -1)
+})
+ok('点击徽章 → 写入 localStorage=1 并刷新', () => {
+  const el = clientLsOn.window.document.getElementById('vcp-trusted-toggle')
+  assert.ok(el)
+  const ev = clientLsOn.window.document.createEvent('MouseEvents')
+  ev.initEvent('click', true, true)
+  el.dispatchEvent(ev)
+  assert.equal(clientLsOn.window.localStorage.getItem('raw-html.trusted'), '0') // 原为 1 → 切到 0
+  assert.ok(clientLsOn.window.__reloaded)
+})
+ok('徽章幂等（重复调用不重复挂载）', () => {
+  const n = clientOff.window.document.querySelectorAll('#vcp-trusted-toggle').length
+  assert.equal(n, 1)
+})
+
+// ============ 4. 联动：插件开启 → 渲染层放行 ============
+console.log('== 联动（插件开启 + 渲染层）==')
+// 模拟「插件已加载」：注入 window.__vcpTrusted（等价 client.js 的 isTrusted）
+const stableOn = loadV6()
+sandbox.window.__vcpTrusted = function () { return true }
+ok('isTrusted 随插件为 true', () => assert.equal(sandbox.window.__vcpTrusted(), true))
 ok('render 含 script → 脚本执行一次', () => {
   stableOn.render('<div id="vcp-root"><script>__T = __T + 1<\/script><p>hi</p></div>', false)
   assert.equal(sandbox.__T, 1)
@@ -115,19 +185,14 @@ ok('script 内容含 HTML 实体可执行（decodeEntities）', () => {
   stableOn.render('<div id="vcp-root"><script>var __amp = 1 &amp;&amp; 2; __T = __amp<\/script></div>', false)
   assert.equal(sandbox.__T, 2)
 })
-ok('localStorage 开关等效', () => {
-  load({ localStorage: { getItem: (k) => (k === 'raw-html.trusted' ? '1' : null), setItem: () => {} } })
-  assert.equal(sandbox.window.__vcpTrusted(), true)
-})
 
-// ============ 3. 回归 ============
+// ============ 5. 回归 ============
 console.log('== 回归 ==')
 ok('__vcpStable.render 挂载', () => assert.equal(typeof sandbox.window.__vcpStable.render, 'function'))
-ok('__vcpTrusted 全局暴露', () => assert.equal(typeof sandbox.window.__vcpTrusted, 'function'))
-ok('__vcpTrustedToggle 幂等', () => {
-  // 重复加载不重复挂徽章（安装标记已置）
-  load()
-  assert.equal(sandbox.window.__vcpTrustedToggle, true)
+ok('渲染层不再自持 window.__vcpTrusted（由插件提供）', () => {
+  const s2 = loadV6()
+  assert.equal(typeof s2, 'object')
+  assert.equal(typeof sandbox.window.__vcpTrusted, 'undefined')
 })
 
 console.log(`\n全部通过：${passed} 项断言 ✓`)

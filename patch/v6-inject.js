@@ -96,14 +96,14 @@
   }
   // ---- 可信模式（Trusted Mode）v7.1 · 先生定调 2026-08-29 ----
   // 双人私密会话内容双方可信 → 正文可放行 script（WebGL/Shader/fetch 由此解锁）。
-  // 开关：localStorage['raw-html.trusted']==='1' 或 window.__DSH_TRUSTED__===true。
-  // 默认关闭：未开启时行为与旧版完全一致（script 截断、URL 白名单严格）。
+  // v7.2（先生定调）：可信模式的「状态与开关 UI」迁入插件 client 层（lib/client.js）——
+  //   window.__vcpTrusted 由插件定义并随插件启停；插件未加载（停用）时本函数返回 false，
+  //   行为与旧版完全一致（script 截断、URL 白名单严格、on* 不放行）＝安全默认。
   // 机制：闭合 <script> 在 parseFrag 阶段被提取出 vdom，消息渲染完成后统一 eval 执行
   // （不依赖 React 对 script 元素的执行行为，确定性一次执行）。
   function isTrusted() {
     try {
-      if (window.__DSH_TRUSTED__ === true) return true
-      if (typeof localStorage !== 'undefined' && localStorage.getItem('raw-html.trusted') === '1') return true
+      return typeof window.__vcpTrusted === 'function' && window.__vcpTrusted()
     } catch (e) {}
     return false
   }
@@ -147,41 +147,7 @@
     }
     if (typeof setTimeout === 'function') setTimeout(exec, 500)
   }
-  // 页面右下角可信模式开关徽章（先生一键开启，无需 DevTools）
-  function installTrustedToggle() {
-    if (window.__vcpTrustedToggle) return
-    window.__vcpTrustedToggle = true
-    var mount = function () {
-      if (typeof document === 'undefined' || !document.body) return false
-      var el = document.getElementById('vcp-trusted-toggle')
-      if (!el) {
-        el = document.createElement('div')
-        el.id = 'vcp-trusted-toggle'
-        el.style.cssText = 'position:fixed;right:14px;bottom:14px;z-index:900;padding:6px 12px;border-radius:999px;font-size:12px;letter-spacing:1px;cursor:pointer;font-family:system-ui,sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.35);user-select:none;'
-        document.body.appendChild(el)
-        el.addEventListener('click', function () {
-          try {
-            localStorage.setItem('raw-html.trusted', isTrusted() ? '0' : '1')
-          } catch (e) {}
-          location.reload()
-        })
-      }
-      var on = isTrusted()
-      // 方案 A · 盾锁（先生 2026-08-29 定稿）：关=盾+锁孔，开=盾+对勾
-      var icon = on
-        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;display:inline-block;vertical-align:-2px;margin-right:5px"><path d="M12 2.8 19.4 5.6v5.6c0 5-3.1 8.4-7.4 10.2C7.7 19.6 4.6 16.2 4.6 11.2V5.6Z"/><path d="m8.8 11.2 2.2 2.2 4.2-4.4"/></svg>'
-        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;display:inline-block;vertical-align:-2px;margin-right:5px"><path d="M12 2.8 19.4 5.6v5.6c0 5-3.1 8.4-7.4 10.2C7.7 19.6 4.6 16.2 4.6 11.2V5.6Z"/><circle cx="12" cy="10.6" r="2.2"/><path d="M12 12.8V15"/></svg>'
-      el.innerHTML = icon + (on ? '可信模式·开' : '可信模式·关')
-      el.style.background = on ? 'rgba(110,231,183,.92)' : 'rgba(96,165,250,.4)'
-      el.style.color = on ? '#052e16' : '#dff0ff'
-      el.style.border = on ? '1px solid #34d399' : '1px solid rgba(96,165,250,.55)'
-      return true
-    }
-    if (mount()) return
-    if (typeof setInterval === 'undefined') return
-    var iv = setInterval(function () { if (mount()) clearInterval(iv) }, 400)
-    setTimeout(function () { clearInterval(iv) }, 10000)
-  }
+  // 页面右下角可信模式开关徽章（v7.2 起由插件 client 层提供，见 lib/client.js）
 
   var F = window.__vcpFast || (window.__vcpFast = {
     c: new Map(),           // 整串缓存（v → 元素）
@@ -1905,7 +1871,7 @@
   }
 
   window.__vcpStable = { render: render, fixBlank: fixVcpBlank, _test: { collectTextSelectors: collectTextSelectors, enforceFontChain: enforceFontChain, healSvgAnimation: healSvgAnimation } }
-  window.__vcpTrusted = isTrusted
-  installTrustedToggle()
+  // v7.2：window.__vcpTrusted 由插件 client 层（lib/client.js）定义并随插件启停；
+  // 插件未加载时 vc()/parseOpen 的防御式调用自动返回 false（安全默认）。
 })()
 /*__DSH_V6_INJECT_END__*/
