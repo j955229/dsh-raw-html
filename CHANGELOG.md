@@ -4,6 +4,8 @@
 
 ## 0.6.2（补丁 v7.2 · 可信模式插件化）
 
+- **机制·一键安装器 install-all.cjs——agent 可执行的安装规范（先生 · 2026-08-28 · 「安装本质由 agent 执行，规范写好即安装即用」）**：先生指出 dsh 生态的插件安装由 agent 驱动，只要安装规范可执行，其他用户装插件即等于全能力就位。落地：①新增 `patch/install-all.cjs` 一键安装器——依次执行 `install-v6.cjs`（渲染能力：HTML/SVG/图表/公式）+ `trusted-patch.cjs`（可信模式 vc 放行），幂等可重跑、自动备份 + node --check、子脚本失败安全中止并提示；②README 安装章节升级为「人 & agent 通用」指引——4 步安装流程（一键补丁 → 注册插件 → 重启 → 开开关）+ 专门的 agent 安装指引段落（确认 node → 跑 install-all → 注册 → 提醒重启），首屏宣传语同步改为指向 install-all；③README 各章节 install-v6 引用统一为 install-all（补丁代号/文件表/dsh 升级重跑/可信模式注意项）。本机实测幂等通过（已打补丁 bundle 两步均安全跳过，exit 0）。
+
 - **机制·可信模式迁入插件 client 层——随插件启停（先生 · 2026-08-28 · 追问「停用插件为何还能开关可信模式」）**：先生发现停用 dsh-raw-html 后主界面右下角「可信模式」徽章依然可开关。根因：可信模式全套代码（`isTrusted()`/徽章/`flushTrustedScripts`）焊死在 `patch/v6-inject.js`，由补丁脚本**直接改写主 bundle**（`dsh-web-frontend/dist/assets/index-*.js`），不经插件加载机制——停用插件只撤销插件注册层（`</>` 按钮），bundle 物理修改原封不动。改造：①`lib/client.js` 新增可信模式模块——`isTrusted()`（localStorage/`__DSH_TRUSTED__`）、`window.__vcpTrusted` 定义、右下角盾锁徽章 `installTrustedToggle()`（加载即挂，随插件加载/卸载）；②`patch/v6-inject.js` 的 `isTrusted()` 改为**防御式调用** `window.__vcpTrusted`（未定义→false=安全默认），删除徽章与 `window.__vcpTrusted` 定义，脚本提取/执行（`extractTrustedScripts`/`flushTrustedScripts`）保留但被守卫；③`patch/trusted-patch.cjs` 的 vc() 条件过滤本就是防御式调用，无需改动；④`patch/update-v6-inject.cjs` 支持 `/*__DSH_V6_INJECT_START__*/`/`END` 新标记定位（兼容旧 `dsh-raw-html v6` 标记）。效果：**安装插件 = 可信模式可用；停用插件 = 徽章消失、vc/parseOpen 放行全部回收（安全默认）**；其他用户安装插件后开关层即插即用（执行载体仍需一次性补丁注入渲染能力）。测试 `tests/trusted.test.mjs` 重写为 v7.2 架构（21 断言，覆盖渲染层防御式调用/插件层状态/徽章切换/联动）；全套回归 315 断言全绿。
 
 ## 0.6.3（补丁 v7.2 · 正文标签名截断事故）
