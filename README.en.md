@@ -6,9 +6,13 @@ Brings **VCP (Visual-Synesthesia)** to the DeepSeek Harness Web GUI:
 HTML in messages goes from "a blob of source code" to a genuinely rendered interface,
 and the agent outputs following a **maintainable design system**.
 
-**Plug & play**: any computer, any agent — install this plugin + toggle the **「</>」switch**
-in the browser → the browser renders HTML, the agent follows the design spec
+**Plug & play**: any computer, any agent — run the one-shot installer patch (`node patch/install-all.cjs`, rendering capability + Trusted Mode in one command)
++ install this plugin + toggle the **「</>」switch** in the browser → the browser renders HTML
+(including SVG cards / Mermaid charts / KaTeX math), the agent follows the design spec
 (design principles / Chinese typography / font pairing).
+
+> The rendering capability (HTML/SVG/charts/math) is injected into the frontend bundle by the patch;
+> the plugin provides the toggles and the protocol injection — see the **Install** section below.
 
 ## ✨ Gallery
 
@@ -41,13 +45,15 @@ in the browser → the browser renders HTML, the agent follows the design spec
 ## Versioning
 
 - **Plugin version**: the `version` in `package.json` (currently **0.3.0**), upgraded via `dsh plugin`.
-- **Patch codename**: the evolution codename of the `patch/` injected modules (currently **v6 · sub-version v6.18**), applied to the frontend bundle by `install-v6.cjs`. The two evolve independently. Frontend compatibility: **0.0.1-rc.5 ~ 0.1.0-rc.7** and **0.1.0-rc.8 / 0.1.1-rc.x** (the `vc`/`hp` and `Xu`/`jd` minified shapes are auto-detected).
+- **Patch codename**: the evolution codename of the `patch/` injected modules (currently **v6 · sub-version v6.38**), applied to the frontend bundle by `install-all.cjs`. The two evolve independently. Frontend compatibility: **0.0.1-rc.5 ~ 0.1.0-rc.7** and **0.1.0-rc.8 / 0.1.1-rc.x** (the `vc`/`hp` and `Xu`/`jd` minified shapes are auto-detected).
 
 ## Components
 
 | Component | Path | Purpose |
 |---|---|---|
-| Universal installer | `patch/install-v6.cjs` | **Recommended**: auto-detects the dist bundle and applies the full v6 patch from any historical state (idempotent + backup/rollback + `node --check` health check); aborts safely on anchor mismatch |
+| One-shot installer | `patch/install-all.cjs` | **Recommended**: one command = `install-v6.cjs` (rendering capability) + `trusted-patch.cjs` (Trusted Mode vc gating); idempotent + backup/rollback + `node --check` health check, aborts safely on anchor mismatch |
+| Universal installer | `patch/install-v6.cjs` | Rendering-capability full v6 patch (component ① of install-all): auto-detects the dist bundle and applies the full v6 patch from any historical state (idempotent + backup/rollback + `node --check` health check) |
+| Trusted Mode vc patch | `patch/trusted-patch.cjs` | Component ② of install-all: turns the hard `script/iframe/object/embed` filter in `vc()` into a conditional one gated by `window.__vcpTrusted` (off by default = safe) |
 | Stable-state render module | `patch/v6-inject.js` | Incremental render engine injected into the bundle: container-aware block caching, streaming-tail placeholders, KaTeX math, Mermaid viewer; `onclick="input('...')"` bridge for real interaction; filters script/iframe/object/embed, `on*` events and `javascript:` protocols |
 | **vcp-fast engine** | `patch/v6-inject.js` | Container-aware block-level incrementality: closed blocks cached (element references stay stable across frames → React skips diff → real looping animations), only the tail re-rendered; measured cache-hit **1200~6800×**, incremental **12×** speedup |
 | Plugin (host side) | `lib/index.js` | Toggle state (**persisted to disk**) + VCP protocol injected into the system prompt + `/fonts` font service (**built-in + external library dual source**) + shared knowledge (the protocol carries the local DESIGN.md path for any agent) |
@@ -58,27 +64,39 @@ in the browser → the browser renders HTML, the agent follows the design spec
 | Benchmark | `patch/vcp-fast-bench.cjs` | Compares old/new paths in a real DOM parsing environment (auto-downloads dependencies, zero install) |
 | Subset tool | `tools/subset_fonts.py` | For maintainers: trims new fonts to common-character subsets + woff2 compression (needs Python + fonttools + brotli) |
 
-## Install (any DSH environment)
+## Install (any DSH environment · for humans & agents alike)
 
-**Recommended: universal installer** (any historical state → full v6 patch, idempotent + backup/rollback + `node --check` health check):
+**Recommended: one-shot installer `patch/install-all.cjs`** — one command installs everything
+("rendering capability + Trusted Mode"; internally runs `install-v6.cjs` full render patch then
+`trusted-patch.cjs` vc gating; idempotent, every step auto-backs-up + `node --check` health check,
+aborts safely without writing on anchor mismatch):
 
 ```powershell
-# 1. Patch the bundle (v6 stable-state module + HTML rendering + security filters, one command)
-node "path\to\plugin\patch\install-v6.cjs"
+# 1. One-shot patch (HTML rendering / SVG cards / Mermaid charts / KaTeX math / Trusted Mode — all in place)
+node "path\to\plugin\patch\install-all.cjs"
 
 # 2. Install the plugin (uninstall: dsh plugin --profile web remove dsh-raw-html)
 dsh plugin --profile web add "path\to\plugin"
 
 # 3. Restart the dsh service, then hard-refresh the browser (Ctrl+F5 if cached)
+# 4. Toggle the 「</>」switch (render/aesthetic); click the bottom-right Trusted Mode badge for scripts
 ```
+
+> **Agent install guide** (for users letting their own agent install this plugin — hand these 4 steps
+> to the agent as-is): ① verify Node.js is available (`node -v`); ② run the one-shot installer
+> `install-all.cjs` (auto-detects the dist bundle; pass `<bundle-path>` as an argument if detection
+> fails); ③ register the plugin into the web profile; ④ tell the user to restart dsh and hard-refresh.
+> All patches are idempotent — re-installing or re-running after a dsh upgrade has no side effects.
 
 If auto-detection fails, specify the bundle path manually:
 
 ```powershell
-node "...\patch\install-v6.cjs" "C:\...\dsh-web-frontend\dist\assets\index-*.js"
+node "...\patch\install-all.cjs" "C:\...\dsh-web-frontend\dist\assets\index-*.js"
 ```
 
-> Legacy scripts (v1/v2 era) `patch/install.cjs`, `patch/patch-frontend.cjs`, `patch/upgrade-patch.cjs` are kept in the source repo for reference; use `install-v6.cjs` for daily installs.
+> They may also be run individually: `install-v6.cjs` (rendering) / `trusted-patch.cjs` (Trusted Mode vc gating);
+> legacy scripts (v1/v2 era) `patch/install.cjs`, `patch/patch-frontend.cjs`, `patch/upgrade-patch.cjs`
+> are kept in the source repo for reference; use `install-all.cjs` for daily installs.
 
 ## vcp-fast engine (v0.3.0)
 
@@ -114,7 +132,7 @@ The "cache + incremental" dual engine (`window.__vcpFast`) layered on the v1 ren
 ## Maintenance / Upgrading
 
 - After each change: `node --check lib/client.js && node --check lib/index.js`; client changes take effect on refresh; host changes require a dsh service restart.
-- A `dsh` upgrade overwrites the patched dist files → re-run `patch/install-v6.cjs` (idempotent; aborts without writing on anchor mismatch; backups in `*.bak-installv6-<timestamp>`).
+- A `dsh` upgrade overwrites the patched dist files → re-run `patch/install-all.cjs` (idempotent; aborts without writing on anchor mismatch; backups in `*.bak-installv6-<timestamp>`).
 - **Dependency declaration rule** (lesson from the 2026-08-19 crash): every third-party package you `import` **must be declared** in package.json (dependencies or peerDependencies) — relying on whatever node_modules happens to exist is gambling your lifeline. Run `node tools/check-deps.cjs` after each change to verify.
 - To improve the design spec → edit `DESIGN.md` (agents read it on demand) + sync the protocol text (`buildProtocolText` in `lib/index.js`).
 - To add built-in fonts → edit the FONTS list in `tools/subset_fonts.py` and re-run (needs Python + fonttools + brotli); woff2 subsets are output to `assets/fonts/`.
