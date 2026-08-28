@@ -81,8 +81,13 @@ const CASE_ENHANCED_END = String.raw`return n.value}();`
 const VC_ENHANCED_START = String.raw`for(const c of i.attributes){`
 const VC_ENHANCED_END = String.raw`s[c.name]=c.value}`
 
-// v6 最终形态
-const CASE_V6 = String.raw`case"html":return function(){if(typeof localStorage!=="undefined"&&localStorage.getItem("dsh.rawHtml")==="1"){try{var vr=window.__vcpStable&&window.__vcpStable.render(n.value,i.streaming);if(vr!==null&&vr!==undefined)return vr}catch(e){}}return n.value}();`
+// v6 最终形态（v6.35 三态化 · 先生定调 2026-08-29）：html 分支判定 !== "0"——
+// 原 v6（==="1"）在新环境/清缓存后 dsh.rawHtml 为 undefined → 一切裸 HTML 显示源码
+// （2026-08-29 上架申请书卡实测事故根因）；三态化：undefined=默认开、"1"=开、"0"=显式关闭。
+const CASE_V6 = String.raw`case"html":return function(){if(typeof localStorage!=="undefined"&&localStorage.getItem("dsh.rawHtml")!=="0"){try{var vr=window.__vcpStable&&window.__vcpStable.render(n.value,i.streaming);if(vr!==null&&vr!==undefined)return vr}catch(e){if(typeof console!=="undefined")console.warn("[vcp] html 渲染异常，已回退源码",e)}}else if(typeof console!=="undefined")console.warn("[vcp] html 渲染已关闭（dsh.rawHtml===\"0\"，</> 按钮可重新开启）");return n.value}();`
+
+// 老 v6.0 形态（==="1"）——供「增量加固」检测升级（已打旧 v6 的用户跑本脚本自动升三态化）
+const CASE_V6_LEGACY = String.raw`case"html":return function(){if(typeof localStorage!=="undefined"&&localStorage.getItem("dsh.rawHtml")==="1"){try{var vr=window.__vcpStable&&window.__vcpStable.render(n.value,i.streaming);if(vr!==null&&vr!==undefined)return vr}catch(e){}}return n.value}();`
 
 const SCRIPT_FILTER = String.raw`if(i.localName==="script"||i.localName==="iframe"||i.localName==="object"||i.localName==="embed")return null;`
 
@@ -101,11 +106,23 @@ const VC_NEW_END = String.raw`u[d.name]=d.value;`
 const VC_DEF_NEW_BEFORE = String.raw`}function Xu(n,i){`
 const SCRIPT_FILTER_NEW = String.raw`if(l.localName==="script"||l.localName==="iframe"||l.localName==="object"||l.localName==="embed")return null;`
 
-// case"html" → v6（新版：流式标记在 context 参数 l 上）
-const CASE_V6_NEW = String.raw`case"html":return function(){if(typeof localStorage!=="undefined"&&localStorage.getItem("dsh.rawHtml")==="1"){try{var vr=window.__vcpStable&&window.__vcpStable.render(n.value,l.streaming);if(vr!==null&&vr!==undefined)return vr}catch(e){}}return n.value}();`
+// case"html" → v6（新版：流式标记在 context 参数 l 上；v6.35 三态化 !== "0"）
+const CASE_V6_NEW = String.raw`case"html":return function(){if(typeof localStorage!=="undefined"&&localStorage.getItem("dsh.rawHtml")!=="0"){try{var vr=window.__vcpStable&&window.__vcpStable.render(n.value,l.streaming);if(vr!==null&&vr!==undefined)return vr}catch(e){if(typeof console!=="undefined")console.warn("[vcp] html 渲染异常，已回退源码",e)}}else if(typeof console!=="undefined")console.warn("[vcp] html 渲染已关闭（dsh.rawHtml===\"0\"，</> 按钮可重新开启）");return n.value}();`
+
+// 老 v6.0 新版形态（==="1" · l.streaming）——增量加固检测用
+const CASE_V6_NEW_LEGACY = String.raw`case"html":return function(){if(typeof localStorage!=="undefined"&&localStorage.getItem("dsh.rawHtml")==="1"){try{var vr=window.__vcpStable&&window.__vcpStable.render(n.value,l.streaming);if(vr!==null&&vr!==undefined)return vr}catch(e){}}return n.value}();`
 
 // vc(Xu) 属性循环 → v6（新版变量名 d/l/u；style 解析内联，含 onclick 桥 / 词边界过滤 / URL 白名单 / ref 锁定）
 const VC_V6_NEW = String.raw`for(const d of l.attributes){if(d.name==="onclick"){const m=/^input\s*\(\s*['"]([\s\S]*?)['"]\s*\)\s*;?\s*$/.exec(d.value);if(m)u.onClick=function(){const fn=window.__dshInput;fn&&fn(m[1])};continue}if(/^on/i.test(d.name))continue;if(d.name==="style"){let sv=d.value;sv=sv.replace(/position\s*:\s*fixed\s*;?/gi,"").replace(/z-index\s*:\s*\d{4,}\s*;?/gi,"").replace(/(?<![\w-])content\s*:[^;]*;?/gi,"");let so={};for(const st of sv.split(";")){const ci=st.indexOf(":");if(ci===-1)continue;const k=st.slice(0,ci).trim().replace(/-([a-z])/g,(x,y)=>y.toUpperCase());so[k]=st.slice(ci+1).trim()}u.style=so;u.ref=function(el){if(el)for(const st2 of sv.split(";")){const j=st2.indexOf(":");if(j===-1)continue;const p=st2.slice(0,j).trim(),v=st2.slice(j+1).trim();if(v&&/^(color|font-family|font-size|font-weight|font-style|line-height|letter-spacing|text-align|text-shadow)$/.test(p))el.style.setProperty(p,v,"important")}};continue}if(d.name==="class"){u.className=d.value;continue}if(d.name==="href"&&!/^(https?:|mailto:|\/|#)/i.test(d.value))continue;if(d.name==="src"&&!/^(https?:|data:image\/|\/|#)/i.test(d.value))continue;if((d.name==="action"||d.name==="formaction"||d.name==="xlink:href")&&!/^(https?:|mailto:|\/|#)/i.test(d.value))continue;u[d.name]=d.value}`
+
+// ---- case"code" 围栏兜底（v6.30 → v6.35 三态化 · 老版前端锚点）----
+// 模型把卡片包进 ```html 围栏时 markdown 解析为 code 节点 → 显示源码；
+// 兜底：代码块以 <div id="vcp-root" 开头 → 调 vcp render（vcp-root 白名单防误伤普通代码）。
+// v6.35 三态化（!== "0"）：开关未设置（undefined）默认接管，显式关闭（"0"）才拒。
+const CODE_CASE_RAW = String.raw`case"code":return wp(n,r,i);`
+const CODE_CASE_V1 = String.raw`case"code":{try{const _v=(n.value||"").trim();if(/^<div\s+id=["']vcp-root["']/i.test(_v)){const _r=window.__vcpStable&&window.__vcpStable.render(n.value,i.streaming);if(_r!==null&&_r!==undefined)return _r}}catch(_e){}return wp(n,r,i)}`
+const CODE_CASE_V2 = String.raw`case"code":{try{const _v=(n.value||"").trim();if(typeof localStorage!=="undefined"&&localStorage.getItem("dsh.rawHtml")==="1"&&/^<div\s+id=["']vcp-root["']/i.test(_v)){const _r=window.__vcpStable&&window.__vcpStable.render(n.value,i.streaming);if(_r!==null&&_r!==undefined)return _r}}catch(_e){}return wp(n,r,i)}`
+const CODE_CASE_V3 = String.raw`case"code":{try{const _v=(n.value||"").trim();if(typeof localStorage!=="undefined"&&localStorage.getItem("dsh.rawHtml")!=="0"&&/^<div\s+id=["']vcp-root["']/i.test(_v)){const _r=window.__vcpStable&&window.__vcpStable.render(n.value,i.streaming);if(_r!==null&&_r!==undefined)return _r}}catch(_e){if(typeof console!=="undefined")console.warn("[vcp] code 围栏渲染异常，已回退代码块",_e)}return wp(n,r,i)}`
 
 // ---- 工具 ------------------------------------------------------------------
 function countOccurrences(text, needle) {
@@ -151,9 +168,49 @@ function main() {
   console.log('[install-v6] bundle:', file)
   let t = fs.readFileSync(file, 'utf8')
 
-  // 幂等：已是 v6
+  // 前端代际探测：rc.8+ 压缩器改名（Xu/jd 或 Sd），锚点组不同（幂等加固与主流程共用）
+  const isNewFrontend = t.includes('function Xu(n,i){') && !t.includes('function vc(n,r){')
+  if (isNewFrontend) console.log('[install-v6] 探测到新版前端（rc.8+ · Xu 压缩形态），使用新锚点组')
+
+  // 已是 v6 → 增量加固：老 v6.0 形态（==="1"）升级三态化、补 case"code" 围栏兜底；
+  // 无变更则跳过（幂等）。有变更时备份 + 写回 + node --check + 失败回滚。
   if (t.includes(V6_MARK)) {
-    console.log('[install-v6] 该 bundle 已是 v6（含 window.__vcpStable），无需操作，跳过。')
+    let hardened = t
+    const done = []
+    const legacyTarget = isNewFrontend ? CASE_V6_NEW_LEGACY : CASE_V6_LEGACY
+    const newTarget = isNewFrontend ? CASE_V6_NEW : CASE_V6
+    const nLegacy = countOccurrences(hardened, legacyTarget)
+    if (nLegacy === 1) {
+      hardened = hardened.split(legacyTarget).join(newTarget)
+      done.push('case"html" 老逻辑(==="1") → v6.35 三态化')
+    } else if (nLegacy > 1) {
+      console.warn('[install-v6] 加固跳过：case"html" 老形态命中多次（异常），不自动修改')
+    }
+    if (!isNewFrontend && countOccurrences(hardened, CODE_CASE_V3) === 0) {
+      for (const [label, from] of [['case"code"(原始)', CODE_CASE_RAW], ['case"code"(v6.30)', CODE_CASE_V1], ['case"code"(v6.32)', CODE_CASE_V2]]) {
+        const nc = countOccurrences(hardened, from)
+        if (nc === 1) { hardened = hardened.split(from).join(CODE_CASE_V3); done.push('case"code" 围栏兜底 → v6.35 三态化'); break }
+        if (nc > 1) { console.warn(`[install-v6] 加固跳过：${label} 命中多次（异常）`); break }
+      }
+    }
+    if (done.length === 0) {
+      console.log('[install-v6] 该 bundle 已是 v6 最新形态，无需操作，跳过。')
+      return
+    }
+    const stamp2 = new Date().toISOString().replace(/[:.]/g, '-')
+    const bak2 = `${file}.bak-installv6-${stamp2}`
+    fs.copyFileSync(file, bak2)
+    console.log('[install-v6] 备份:', bak2)
+    fs.writeFileSync(file, hardened, 'utf8')
+    try {
+      execFileSync(process.execPath, ['--check', file], { stdio: 'inherit' })
+      console.log('[install-v6] 健康检查通过：node --check OK')
+    } catch (e) {
+      fs.copyFileSync(bak2, file)
+      console.error('[install-v6] 健康检查失败，已回滚到备份！')
+      process.exit(1)
+    }
+    console.log(`[install-v6] ✓ 增量加固完成：${done.join('；')}`)
     return
   }
 
@@ -163,9 +220,6 @@ function main() {
   fs.copyFileSync(file, bak)
   console.log('[install-v6] 备份:', bak)
 
-  // 前端代际探测：rc.8+ 压缩器改名（Xu/jd 或 Sd），锚点组不同
-  const isNewFrontend = t.includes('function Xu(n,i){') && !t.includes('function vc(n,r){')
-  if (isNewFrontend) console.log('[install-v6] 探测到新版前端（rc.8+ · Xu 压缩形态），使用新锚点组')
   const caseTarget = isNewFrontend ? CASE_V6_NEW : CASE_V6
 
   let next = t
@@ -185,6 +239,32 @@ function main() {
     process.exit(1)
   }
   console.log('[install-v6] ✓ case"html" 分支 → v6')
+
+  // 1.5) case"code" 围栏兜底 → v6.35 三态化（增强能力：模型把卡片包进 ```html 围栏时仍渲染）
+  // 新版前端（rc.8+）case"code" 形态未收录：跳过 + 警告，不阻塞安装（不影响基础渲染）。
+  if (isNewFrontend) {
+    console.warn('[install-v6] 新版前端（rc.8+）case"code" 锚点未收录，围栏兜底跳过（不影响基础渲染）')
+  } else if (countOccurrences(next, CODE_CASE_V3) !== 0) {
+    console.log('[install-v6] ✓ case"code" 围栏兜底已是 v6.35 三态化')
+  } else {
+    let codeNext = null
+    const codeChain = [
+      ['case"code"(原始)', CODE_CASE_RAW],
+      ['case"code"(v6.30 纯白名单)', CODE_CASE_V1],
+      ['case"code"(v6.32 开关检查)', CODE_CASE_V2],
+    ]
+    for (const [label, from] of codeChain) {
+      const n = countOccurrences(next, from)
+      if (n === 1) { codeNext = replaceOnce(next, from, CODE_CASE_V3, label); break }
+      if (n > 1) break // 异常多命中，放弃升级
+    }
+    if (codeNext !== null) {
+      next = codeNext
+      console.log('[install-v6] ✓ case"code" 围栏兜底 → v6.35 三态化')
+    } else {
+      console.warn('[install-v6] case"code" 分支形态未知/异常，围栏兜底跳过（不影响基础渲染）')
+    }
+  }
 
   // 2) vc(Xu) 属性循环 → v6
   if (isNewFrontend) {

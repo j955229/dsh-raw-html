@@ -2,12 +2,15 @@
 /**
  * dsh-raw-html —— 一键安装器（v7.2 · agent 友好）
  *
- * 依次执行两步补丁，把「HTML 渲染 + SVG/图表/公式 + 可信模式」全部装进 dsh 前端：
+ * 依次执行三步补丁，把「HTML 渲染 + SVG/图表/公式 + 可信模式」全部装进 dsh 前端：
  *
- *   1. install-v6.cjs   —— 渲染能力 v6 全量补丁（case"html" 分支 + vc 属性循环 + v6-inject
- *                          稳定区模块：SVG 卡片 / Mermaid 图表 / KaTeX 公式 / 流式固化）
- *   2. trusted-patch.cjs—— 可信模式 vc 层条件放行（script/iframe/object/embed 按
- *                          window.__vcpTrusted 放行，默认关闭 = 安全）
+ *   1. install-v6.cjs     —— 渲染能力 v6 全量补丁（case"html" 三态化 + case"code" 围栏兜底
+ *                            + vc/Xu 属性循环 + v6-inject 稳定区模块：SVG 卡片 / Mermaid 图表 /
+ *                            KaTeX 公式 / 流式固化），新旧前端（vc / Xu）代际自动适配
+ *   2. update-v6-inject.cjs—— v6 渲染模块就地更新至最新（已装旧版 v6 的用户自动升级；
+ *                            全新安装时内容相同自动跳过）
+ *   3. trusted-patch.cjs  —— 可信模式 vc/Xu 层条件放行（script/iframe/object/embed 按
+ *                            window.__vcpTrusted 放行，默认关闭 = 安全），新旧前端双锚点
  *
  * 幂等安全：两个子脚本各自幂等（已打补丁自动跳过）；锚点不匹配时子脚本安全中止、
  * 不写入任何修改，本脚本随之中止并提示。每一步都带备份 + node --check 健康检查。
@@ -25,7 +28,8 @@ const path = require('node:path')
 
 const STEPS = [
   { name: '渲染能力（v6 全量补丁 · HTML/SVG/图表/公式）', script: 'install-v6.cjs' },
-  { name: '可信模式（vc 层条件放行 · 默认关闭保安全）', script: 'trusted-patch.cjs' },
+  { name: '渲染模块升级（v6-inject 就地更新至最新，幂等）', script: 'update-v6-inject.cjs' },
+  { name: '可信模式（vc/Xu 层条件放行 · 默认关闭保安全）', script: 'trusted-patch.cjs' },
 ]
 
 const bundleArg = process.argv[2] || ''
