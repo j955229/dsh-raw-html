@@ -18,6 +18,7 @@ Supports SVG, Mermaid, KaTeX, bundled fonts, interactive buttons, and an optiona
 
 - **DeepSeek Harness 0.1.2-alpha.1 support**: VCP rendering now uses the official `conversation.chat.node / assistant-step` slot instead of modifying `dsh-web-frontend/dist`.
 - **Works with DSH Desktop load order**: the plugin waits for a late `assistant-step` registration before installing its renderer.
+- **Native Settings page**: on DSH builds that provide `settings.section`, plugin configuration appears directly in DSH Settings instead of using a separate composer-side settings popover.
 - **Native rendering stays intact**: plain Markdown continues to use the official DSH Assistant renderer; only `#vcp-root` content enters the VCP Shadow DOM.
 - **Trusted Mode no longer depends on the legacy bundle patch**: the modern plugin path directly supports script, iframe, WebGL, fetch, and related capabilities.
 - **Legacy DSH remains supported**: the original patch path is retained only as a compatibility fallback.
@@ -42,7 +43,7 @@ Inside the DSH Desktop terminal, a `dsh plugin` command **without `--profile` ta
 Then:
 
 1. Fully quit and restart DSH Desktop.
-2. Find the `</>` button next to the composer.
+2. Open **Settings → VCP Rendering**.
 3. Enable **Render HTML**. Enable **Aesthetic injection** only when you also want the agent to proactively use the VCP visual style.
 
 ### DSH Web / CLI profile
@@ -71,11 +72,12 @@ Restart DSH after updating.
 
 ## Usage
 
-The `</>` button has three states:
+On DeepSeek Harness 0.1.2-alpha.1 / DSH Desktop 2.0.4, all plugin settings live under **Settings → VCP Rendering**:
 
-- `</> OFF`: HTML rendering disabled.
-- `</> Render`: VCP HTML rendering only.
-- `</> ON`: HTML rendering plus VCP / aesthetic prompt injection.
+- **Render HTML** controls VCP HTML rendering.
+- **Aesthetic injection** controls style, palette, font, and framing guidance.
+- **Trusted Mode** controls advanced capabilities such as `script`, `iframe`, WebGL, and `fetch`.
+- **Aesthetics** manages styles, palettes, font previews, and external font folders.
 
 Plain Markdown continues to use the native DSH renderer. Only content containing `#vcp-root` is handled by the VCP renderer.
 
@@ -89,9 +91,20 @@ to fill the composer and send the reply.
 
 ### Aesthetics and fonts
 
-Open `</>` → **Aesthetics** to lock, edit, or create styles. The font dropdown on a style card is preview-only; font categories in the style editor affect future generations and do not rewrite existing VCP content.
+Open **Settings → VCP Rendering → Aesthetics** to lock, edit, or create styles.
 
-Mount external font folders at the bottom of the Aesthetics panel, then use **Rescan**. Available fonts are marked with `✓`; unavailable fonts cannot be selected.
+The font picker now lists only fonts that are actually available:
+
+- bundled fonts appear automatically;
+- users may mount any font folder and the plugin recursively scans `.ttf / .otf / .woff / .woff2 / .ttc` files;
+- fonts do not need to be pre-registered in `DESIGN.md`;
+- mounted folder structure does not need to match the author's machine;
+- missing fonts are not shown as selectable options;
+- an old style that references a now-missing font is shown as unavailable but the missing font is not re-added to the picker.
+
+Known mappings in `DESIGN.md` are now only optional friendly aliases applied when a matching font file is actually present. They no longer define the picker inventory.
+
+Font preview is preview-only. Font categories in the style editor affect future generations and do not rewrite existing VCP content.
 
 ## Compatibility
 
@@ -108,7 +121,7 @@ The legacy installer modifies the old DSH frontend bundle. DeepSeek Harness 0.1.
 
 ## Trusted Mode
 
-Trusted Mode is disabled by default and is integrated into the `</>` → **VCP rendering settings** panel. The separate bottom-right floating badge is no longer used.
+Trusted Mode is disabled by default and is integrated into **Settings → VCP Rendering**. The separate bottom-right floating badge is no longer used.
 
 When enabled, it relaxes HTML restrictions and allows model-generated content to use capabilities such as `script`, `iframe`, `object`, `embed`, WebGL, and `fetch`.
 
