@@ -29,6 +29,8 @@ Supports SVG, Mermaid, KaTeX, bundled fonts, interactive buttons, and an optiona
 
 ### DSH Desktop 2.0.4
 
+> **If an older `dsh-raw-html` is already installed: fully quit DSH Desktop from the tray, run `dsh plugin remove dsh-raw-html`, then install this branch. Replacing a plugin while Windows still has the old package loaded can fail with `ERR_PNPM_EPERM`.**
+
 DSH Desktop 2.0.4 ships DeepSeek Harness 0.1.2-alpha.1. Open **DSH Terminal** from DSH Desktop, confirm the active Profile shown at the top (the default is `desktop`), then run:
 
 ```powershell
