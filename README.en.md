@@ -24,15 +24,17 @@ Supports SVG, Mermaid, KaTeX, bundled fonts, interactive buttons, and an optiona
 
 ## Install
 
-### DSH Desktop
+### DSH Desktop 2.0.4
 
-Run in PowerShell:
+DSH Desktop 2.0.4 ships DeepSeek Harness 0.1.2-alpha.1. Open **DSH Terminal** from DSH Desktop, confirm the active Profile shown at the top (the default is `desktop`), then run:
 
 ```powershell
 $dir = Join-Path $HOME "dsh-plugins\dsh-raw-html"
 git clone https://github.com/plolpl789/dsh-raw-html.git $dir
 dsh plugin add $dir
 ```
+
+Inside the DSH Desktop terminal, a `dsh plugin` command **without `--profile` targets the currently active Desktop profile**. `--profile web` targets the Web profile instead, not the active Desktop profile.
 
 Then:
 
