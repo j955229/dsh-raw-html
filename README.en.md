@@ -96,7 +96,8 @@ Open **Settings → VCP Rendering → Aesthetics** to lock, edit, or create styl
 The font picker now lists only fonts that are actually available:
 
 - bundled fonts appear automatically;
-- users may mount any font folder and the plugin recursively scans `.ttf / .otf / .woff / .woff2 / .ttc` files;
+- **Choose folder** opens the native system directory picker on supported desktop DSH builds; users may also enter a font folder or a single font file path manually;
+- folders are scanned recursively for `.ttf / .otf / .woff / .woff2 / .ttc`, and individual font files can also be mounted directly;
 - fonts do not need to be pre-registered in `DESIGN.md`;
 - mounted folder structure does not need to match the author's machine;
 - missing fonts are not shown as selectable options;
