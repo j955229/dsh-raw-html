@@ -14,6 +14,14 @@
 ![效果图 4](docs/images/banner-4.jpg)
 ![效果图 5](docs/images/banner-5.jpg)
 
+## 相比原版 0.6.0 的变化
+
+- **现代 DSH 不再需要打补丁**：直接使用官方 `conversation.chat.node / assistant-step` slot 渲染 VCP，不再修改 `dsh-web-frontend/dist`。
+- **兼容 DSH Desktop**：修复 `assistant-step` 晚注册时无法接管的问题，插件会等待官方 renderer 出现后再注册。
+- **普通消息不受影响**：普通 Markdown 继续使用 DSH 原生 Assistant renderer，只有 `#vcp-root` 进入 VCP Shadow DOM。
+- **Trusted Mode 不再依赖旧 bundle patch**：现代路径直接在插件内支持 script、iframe、WebGL、fetch 等能力。
+- **旧版 DSH 仍可用**：原有 legacy patch 保留，只作为旧环境兼容方案。
+
 ## 安装
 
 ### DSH Desktop
@@ -86,7 +94,7 @@ Legacy patch 会修改旧版 DSH 的 frontend bundle。现代 DSH 不应运行�
 
 ## Trusted Mode
 
-Trusted Mode 默认关闭。
+Trusted Mode 默认关闭。插件加载后，页面右下角会显示 **「可信模式·关」** 徽章；点击后会切换为 **「可信模式·开」** 并刷新页面。
 
 开启后会放宽 HTML 限制，允许模型输出中的脚本和嵌入内容使用 `script`、`iframe`、`object`、`embed`、WebGL、`fetch` 等能力。
 
