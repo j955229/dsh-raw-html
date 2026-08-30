@@ -18,6 +18,7 @@ function reactStub() {
     },
     useRef(value) { return { current: value } },
     useMemo(factory) { return factory() },
+    useState(value) { return [typeof value === 'function' ? value() : value, () => {}] },
     useLayoutEffect() {},
   }
 }
@@ -110,6 +111,31 @@ function officialEntry() {
     locale: 'conversation',
   }
 }
+
+test('native DSH settings section registers as its own navigation page', () => {
+  const client = loadClient()
+  let registration = null
+  let disposed = false
+  const slots = {
+    inject(name, setup) {
+      assert.equal(name, 'settings.section')
+      const dispose = setup()
+      return () => { if (typeof dispose === 'function') dispose() }
+    },
+    register(options, component) {
+      registration = { options, component }
+      return () => { disposed = true }
+    },
+  }
+  const handle = client.exports.registerNativeSettings({ slots })
+  assert.equal(handle.isMounted(), true)
+  assert.equal(registration.options.id, 'raw-html')
+  assert.equal(registration.options.order, 90)
+  assert.equal(registration.options.label, 'VCP 渲染')
+  assert.equal(registration.component, client.exports.RawHtmlSettingsSection)
+  handle.dispose()
+  assert.equal(disposed, true)
+})
 
 test('existing official assistant is shadowed at priority -1', () => {
   const client = loadClient()
