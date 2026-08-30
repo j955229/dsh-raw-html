@@ -6,6 +6,14 @@ Supports SVG, Mermaid, KaTeX, bundled fonts, interactive buttons, and an optiona
 
 **[简体中文](./README.md)**
 
+## Gallery
+
+![Banner 1](docs/images/banner-1.jpg)
+![Banner 2](docs/images/banner-2.jpg)
+![Banner 3](docs/images/banner-3.jpg)
+![Banner 4](docs/images/banner-4.jpg)
+![Banner 5](docs/images/banner-5.jpg)
+
 ## Install
 
 ### DSH Desktop
