@@ -6,13 +6,13 @@ Brings **VCP (Visual-Synesthesia)** to the DeepSeek Harness Web GUI:
 HTML in messages goes from "a blob of source code" to a genuinely rendered interface,
 and the agent outputs following a **maintainable design system**.
 
-**Plug & play**: any computer, any agent — run the one-shot installer patch (`node patch/install-all.cjs`, rendering capability + Trusted Mode in one command)
-+ install this plugin + toggle the **「</>」switch** in the browser → the browser renders HTML
+**Plug & play** on modern DSH: install this plugin + toggle the **「</>」switch** in the browser → the browser renders HTML
 (including SVG cards / Mermaid charts / KaTeX math), the agent follows the design spec
 (design principles / Chinese typography / font pairing).
 
-> The rendering capability (HTML/SVG/charts/math) is injected into the frontend bundle by the patch;
-> the plugin provides the toggles and the protocol injection — see the **Install** section below.
+> DeepSeek Harness 0.1.2-alpha.1 and other environments with the official
+> `conversation.chat.node` / `assistant-step` slot require no frontend bundle patch.
+> `patch/install-all.cjs` is retained only for legacy DSH.
 
 ## ✨ Gallery
 
@@ -24,7 +24,14 @@ and the agent outputs following a **maintainable design system**.
 ![Banner 4](docs/images/banner-4.jpg)
 ![Banner 5](docs/images/banner-5.jpg)
 
-## 📣 What's New (v0.3.0 · patch v6.18)
+## 📣 What's New (v0.7.0 · official assistant slot)
+
+- Modern rendering now shadows the official `assistant-step` cell at priority `-1`; plain Markdown still uses the official Assistant component.
+- A slot-entry subscription fixes late registration: the plugin waits for the official renderer, registers once, and disposes both subscription and renderer correctly.
+- VCP content renders in a Shadow DOM with strict sanitization by default. Trusted Mode script / iframe / WebGL / fetch execution now lives in the modern renderer instead of the patched bundle.
+- Legacy patch scripts and tests remain available as a compatibility path.
+
+### Earlier updates
 
 **2026-08-24 updates**
 
@@ -44,61 +51,59 @@ and the agent outputs following a **maintainable design system**.
 
 ## Versioning
 
-- **Plugin version**: the `version` in `package.json` (currently **0.3.0**), upgraded via `dsh plugin`.
-- **Patch codename**: the evolution codename of the `patch/` injected modules (currently **v6 · sub-version v6.38**), applied to the frontend bundle by `install-all.cjs`. The two evolve independently. Frontend compatibility: **0.0.1-rc.5 ~ 0.1.0-rc.7** and **0.1.0-rc.8 / 0.1.1-rc.x** (the `vc`/`hp` and `Xu`/`jd` minified shapes are auto-detected).
+- **Plugin version**: the `version` in `package.json` (currently **0.7.0**), upgraded via `dsh plugin`; modern DSH uses the official slot.
+- **Legacy patch codename**: **v6.38**, retained only for DSH builds without the official assistant slot.
 
 ## Components
 
 | Component | Path | Purpose |
 |---|---|---|
-| One-shot installer | `patch/install-all.cjs` | **Recommended**: one command = `install-v6.cjs` (rendering capability) + `trusted-patch.cjs` (Trusted Mode vc gating); idempotent + backup/rollback + `node --check` health check, aborts safely on anchor mismatch |
-| Universal installer | `patch/install-v6.cjs` | Rendering-capability full v6 patch (component ① of install-all): auto-detects the dist bundle and applies the full v6 patch from any historical state (idempotent + backup/rollback + `node --check` health check) |
-| Trusted Mode vc patch | `patch/trusted-patch.cjs` | Component ② of install-all: turns the hard `script/iframe/object/embed` filter in `vc()` into a conditional one gated by `window.__vcpTrusted` (off by default = safe) |
-| Stable-state render module | `patch/v6-inject.js` | Incremental render engine injected into the bundle: container-aware block caching, streaming-tail placeholders, KaTeX math, Mermaid viewer; `onclick="input('...')"` bridge for real interaction; filters script/iframe/object/embed, `on*` events and `javascript:` protocols |
+| Modern slot renderer | `lib/client.js` | Official assistant slot routing, late-registration lifecycle, Shadow DOM, sanitization, stable DOM updates, KaTeX, Mermaid, VCPColorEngine, download/input bridges, and Trusted Mode execution |
+| Legacy one-shot installer | `patch/install-all.cjs` | **Legacy DSH only**: installs `install-v6.cjs` + `trusted-patch.cjs`; idempotent with backup/rollback and syntax checks |
+| Legacy render module | `patch/v6-inject.js` | Injected into the dist bundle only when the official assistant slot is unavailable; preserves vcp-fast and self-healing behavior |
 | **vcp-fast engine** | `patch/v6-inject.js` | Container-aware block-level incrementality: closed blocks cached (element references stay stable across frames → React skips diff → real looping animations), only the tail re-rendered; measured cache-hit **1200~6800×**, incremental **12×** speedup |
 | Plugin (host side) | `lib/index.js` | Toggle state (**persisted to disk**) + VCP protocol injected into the system prompt + `/fonts` font service (**built-in + external library dual source**) + shared knowledge (the protocol carries the local DESIGN.md path for any agent) |
-| Plugin (browser side) | `lib/client.js` | Injects the **「</>」toggle** next to the composer send button + exposes `window.__dshInput` (VCP button → fill & send) |
+| Plugin (browser side) | `lib/client.js` | Modern renderer plus the **「</>」settings**, Trusted Mode badge, and `window.__dshInput` |
 | **Built-in fonts** | `assets/fonts/` | **7 open-source fonts (woff2 subsets, ~7.6MB) shipped with the plugin** — WenKai / WenKai Light / MaShanZheng / HeiTi / HeiTi Light / HeiTi Bold / GreatVibes, all OFL-licensed, zero config |
 | Design system docs | `DESIGN.md` | Full spec library: font list / palettes / Chinese typography / security iron laws (knowledge layer; agents may read on demand) |
-| Regression tests | `tests/` | Six suites (stable 47 + security 43 + bundle + smoke + math + mermaid, 200+ assertions): frame sequences / security filtering / bundle integrity (run after any engine change) |
+| Regression tests | `tests/` | Modern slot lifecycle/security/Trusted/stable-DOM tests plus legacy stable/security/smoke/math/mermaid/trusted suites; bundle tests run separately when a legacy dist is available |
 | Benchmark | `patch/vcp-fast-bench.cjs` | Compares old/new paths in a real DOM parsing environment (auto-downloads dependencies, zero install) |
 | Subset tool | `tools/subset_fonts.py` | For maintainers: trims new fonts to common-character subsets + woff2 compression (needs Python + fonttools + brotli) |
 
-## Install (any DSH environment · for humans & agents alike)
+## Install
 
-**Recommended: one-shot installer `patch/install-all.cjs`** — one command installs everything
-("rendering capability + Trusted Mode"; internally runs `install-v6.cjs` full render patch then
-`trusted-patch.cjs` vc gating; idempotent, every step auto-backs-up + `node --check` health check,
-aborts safely without writing on anchor mismatch):
+### Modern DSH (recommended)
+
+For environments with the official `conversation.chat.node` / `assistant-step` slot, including DeepSeek Harness 0.1.2-alpha.1:
 
 ```powershell
-# 1. One-shot patch (HTML rendering / SVG cards / Mermaid charts / KaTeX math / Trusted Mode — all in place)
-node "path\to\plugin\patch\install-all.cjs"
-
-# 2. Install the plugin (uninstall: dsh plugin --profile web remove dsh-raw-html)
+# 1. Install the plugin
 dsh plugin --profile web add "path\to\plugin"
 
-# 3. Restart the dsh service, then hard-refresh the browser (Ctrl+F5 if cached)
-# 4. Toggle the 「</>」switch (render/aesthetic); click the bottom-right Trusted Mode badge for scripts
+# 2. Restart dsh and refresh the browser
+# 3. Enable 「</>」; enable the bottom-right Trusted Mode badge only when scripts are required
 ```
 
-> **Agent install guide** (for users letting their own agent install this plugin — hand these 4 steps
-> to the agent as-is): ① verify Node.js is available (`node -v`); ② run the one-shot installer
-> `install-all.cjs` (auto-detects the dist bundle; pass `<bundle-path>` as an argument if detection
-> fails); ③ register the plugin into the web profile; ④ tell the user to restart dsh and hard-refresh.
-> All patches are idempotent — re-installing or re-running after a dsh upgrade has no side effects.
+This path does not modify `@deepseek-ai/dsh-web-frontend/dist/assets/index-*.js` and does not depend on bundle hashes or minified `vc` / `Xu` / `jd` symbols.
 
-If auto-detection fails, specify the bundle path manually:
+### Legacy DSH compatibility
+
+Only use the installer if the environment has no official assistant slot and still displays `#vcp-root` as source:
+
 
 ```powershell
+node "path\to\plugin\patch\install-all.cjs"
+# If auto-detection fails:
 node "...\patch\install-all.cjs" "C:\...\dsh-web-frontend\dist\assets\index-*.js"
 ```
 
-> They may also be run individually: `install-v6.cjs` (rendering) / `trusted-patch.cjs` (Trusted Mode vc gating);
-> legacy scripts (v1/v2 era) `patch/install.cjs`, `patch/patch-frontend.cjs`, `patch/upgrade-patch.cjs`
-> are kept in the source repo for reference; use `install-all.cjs` for daily installs.
+This is **legacy compatibility only**. The running plugin never mutates `node_modules` by itself.
 
-## vcp-fast engine (v0.3.0)
+## Rendering stability
+
+The modern renderer performs node-level updates inside its Shadow DOM. Completed nodes keep their DOM identity while the streaming tail changes, preserving animations, canvas/WebGL state, and interaction state without `window.__vcpStable`.
+
+The following `window.__vcpFast` engine applies only to the legacy patch:
 
 The "cache + incremental" dual engine (`window.__vcpFast`) layered on the v1 render patch:
 
@@ -132,21 +137,24 @@ The "cache + incremental" dual engine (`window.__vcpFast`) layered on the v1 ren
 ## Maintenance / Upgrading
 
 - After each change: `node --check lib/client.js && node --check lib/index.js`; client changes take effect on refresh; host changes require a dsh service restart.
-- A `dsh` upgrade overwrites the patched dist files → re-run `patch/install-all.cjs` (idempotent; aborts without writing on anchor mismatch; backups in `*.bak-installv6-<timestamp>`).
+- Modern DSH upgrades normally require only the normal plugin upgrade/restart. Frontend rebuild hashes and minifier renames do not affect the official slot path.
+- Re-run `patch/install-all.cjs` only when a legacy DSH upgrade overwrites its patched dist bundle.
 - **Dependency declaration rule** (lesson from the 2026-08-19 crash): every third-party package you `import` **must be declared** in package.json (dependencies or peerDependencies) — relying on whatever node_modules happens to exist is gambling your lifeline. Run `node tools/check-deps.cjs` after each change to verify.
 - To improve the design spec → edit `DESIGN.md` (agents read it on demand) + sync the protocol text (`buildProtocolText` in `lib/index.js`).
 - To add built-in fonts → edit the FONTS list in `tools/subset_fonts.py` and re-run (needs Python + fonttools + brotli); woff2 subsets are output to `assets/fonts/`.
 
-## Restore (undo patch)
+## Uninstall / restore
 
 ```powershell
-# Rename the backup generated by the installer back (e.g. index-*.js.bak-xxx → index-*.js), then remove the plugin:
+# Modern DSH: remove the plugin. Legacy DSH: also restore the installer's bundle backup.
 dsh plugin --profile web remove dsh-raw-html
 ```
 
 ## Security notes
 
-Once enabled, HTML from model output is rendered as UI. The patch filters scripts/events/dangerous
-protocols (React rendering naturally never executes script; events only allow the controlled
+Once enabled, HTML from model output is rendered as UI. The modern renderer filters scripts/events/dangerous
+protocols by default (events only allow the controlled
 `onclick="input('...')"` channel; `script/iframe/object/embed` and `javascript:` protocols are
 dropped), but styles and external images remain reachable — **enable only for trusted models**.
+
+Trusted Mode is off by default. When explicitly enabled, inline scripts execute once after the Shadow DOM is mounted; iframe/object/embed, WebGL, and fetch are available, while `javascript:` URLs remain blocked. A scoped `document` lookup lets existing scripts find canvas elements inside the card. The modern state, badge, sanitizer, and execution carrier all live in `lib/client.js`; unloading the plugin removes the renderer and its subscription. Legacy DSH continues to use the guarded v6 patch implementation.
