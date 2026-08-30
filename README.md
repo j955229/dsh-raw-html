@@ -24,15 +24,17 @@
 
 ## 安装
 
-### DSH Desktop
+### DSH Desktop 2.0.4
 
-在 PowerShell 中执行：
+DSH Desktop 2.0.4 内置 DeepSeek Harness 0.1.2-alpha.1。请从 DSH Desktop 打开 **DSH 终端**，确认终端顶部显示当前 Profile（默认是 `desktop`），然后执行：
 
 ```powershell
 $dir = Join-Path $HOME "dsh-plugins\dsh-raw-html"
 git clone https://github.com/plolpl789/dsh-raw-html.git $dir
 dsh plugin add $dir
 ```
+
+在 DSH Desktop 自带终端里，**不带 `--profile` 的 `dsh plugin` 命令会安装到当前激活的 Desktop profile**。`--profile web` 会改到 Web profile，不是 Desktop 当前 profile。
 
 安装后：
 
