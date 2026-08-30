@@ -8,11 +8,11 @@
 
 ## 0. 字体库（内置精选 + 外置全量 双源）
 
-> `/fonts/` 服务解析两个来源：① **插件内置精选**（assets/fonts，随插件分发，任何电脑装上即可用，woff2 子集共 8.9MB）；② **外置大库**（settings `raw-html.fontsRoot` 可配置，默认 `I:\字体`，本机 219 款全量；其他电脑可指向自己的字体库或留空）。
+> `/fonts/` 服务解析两个来源：① **插件内置精选**（`assets/fonts`，随插件分发，安装后即可使用）；② **外置字体库**（可选，由用户在美学系统中挂载自己的字体目录；默认不配置外置目录）。
 
 ### 0.0 内置精选（随插件分发 · 无需配置 · 直接可用 · 全部开源授权）
 
-> 用法：`@font-face{font-family:'Lanxi-WenKai';src:url('/fonts/Lanxi-WenKai.woff2');}` 后引用。由 `tools/subset_fonts.py`（开源 7 款）+ `tools/subset-style-fonts.py`（12 风格全量 19 款，先生 2026-08-29 拍板入库）生成（GB2312 一级 3755 字 + 标点 + 数字序号；鱼尾行书繁为全 BMP 保繁体）。**26 款内置字体随包分发，任何电脑装插件即开盖即用**；含开源授权 + 先生自备字库子集（授权由先生确认）。
+> 用法：`@font-face{font-family:'Lanxi-WenKai';src:url('/fonts/Lanxi-WenKai.woff2');}` 后引用。内置字体由 `tools/subset_fonts.py` 与 `tools/subset-style-fonts.py` 生成；外置字体的授权与使用范围由用户自行确认。
 
 | 领域 | font-family 名 | /fonts/ 路径 | 体积 |
 |---|---|---|---|
