@@ -96,7 +96,7 @@ Open **Settings → VCP Rendering → Aesthetics** to lock, edit, or create styl
 The font picker now lists only fonts that are actually available:
 
 - bundled fonts appear automatically;
-- on Windows DSH Desktop, **Choose font source** uses one system dialog for both folders and font files: selecting a font mounts that file, while entering a folder and confirming mounts the whole folder;
+- **Choose font source** now uses the plugin's unified browser, showing folders and supported font files in one list; select either one to mount it, and double-click folders to enter them;
 - users may also enter a font folder or a single font file path manually;
 - every mounted font source is listed separately and can be unmounted with its `✕` button;
 - folders are scanned recursively for `.ttf / .otf / .woff / .woff2 / .ttc`, and individual font files can also be mounted directly;
