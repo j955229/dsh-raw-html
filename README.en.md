@@ -14,6 +14,14 @@ Supports SVG, Mermaid, KaTeX, bundled fonts, interactive buttons, and an optiona
 ![Banner 4](docs/images/banner-4.jpg)
 ![Banner 5](docs/images/banner-5.jpg)
 
+## Changes from upstream 0.6.0
+
+- **No frontend patch on modern DSH**: VCP rendering now uses the official `conversation.chat.node / assistant-step` slot instead of modifying `dsh-web-frontend/dist`.
+- **Works with DSH Desktop load order**: the plugin waits for a late `assistant-step` registration before installing its renderer.
+- **Native rendering stays intact**: plain Markdown continues to use the official DSH Assistant renderer; only `#vcp-root` content enters the VCP Shadow DOM.
+- **Trusted Mode no longer depends on the legacy bundle patch**: the modern plugin path directly supports script, iframe, WebGL, fetch, and related capabilities.
+- **Legacy DSH remains supported**: the original patch path is retained only as a compatibility fallback.
+
 ## Install
 
 ### DSH Desktop
@@ -86,7 +94,7 @@ The legacy installer modifies the old DSH frontend bundle. Modern DSH should not
 
 ## Trusted Mode
 
-Trusted Mode is disabled by default.
+Trusted Mode is disabled by default. After the plugin loads, a **“Trusted Mode · Off”** badge appears in the bottom-right corner of the page. Clicking it switches to **“Trusted Mode · On”** and reloads the page.
 
 When enabled, it relaxes HTML restrictions and allows model-generated content to use capabilities such as `script`, `iframe`, `object`, `embed`, WebGL, and `fetch`.
 
