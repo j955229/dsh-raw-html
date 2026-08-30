@@ -87,6 +87,12 @@ onclick="input('reply text')"
 
 to fill the composer and send the reply.
 
+### Aesthetics and fonts
+
+Open `</>` → **Aesthetics** to lock, edit, or create styles. The font dropdown on a style card is preview-only; font categories in the style editor affect future generations and do not rewrite existing VCP content.
+
+Mount external font folders at the bottom of the Aesthetics panel, then use **Rescan**. Available fonts are marked with `✓`; unavailable fonts cannot be selected.
+
 ## Compatibility
 
 DeepSeek Harness **0.1.2-alpha.1** uses the official `conversation.chat.node` / `assistant-step` slot and **does not require frontend bundle patching or the patch installer**.
@@ -102,7 +108,7 @@ The legacy installer modifies the old DSH frontend bundle. DeepSeek Harness 0.1.
 
 ## Trusted Mode
 
-Trusted Mode is disabled by default. After the plugin loads, a **“Trusted Mode · Off”** badge appears in the bottom-right corner of the page. Clicking it switches to **“Trusted Mode · On”** and reloads the page.
+Trusted Mode is disabled by default and is integrated into the `</>` → **VCP rendering settings** panel. The separate bottom-right floating badge is no longer used.
 
 When enabled, it relaxes HTML restrictions and allows model-generated content to use capabilities such as `script`, `iframe`, `object`, `embed`, WebGL, and `fetch`.
 
