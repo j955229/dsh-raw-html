@@ -24,13 +24,16 @@
 
 ## 安装
 
+> 当前版本尚未合并到原作者仓库，请从 `j955229/dsh-raw-html` 的 `refactor/official-assistant-slot` 分支安装。
+
+
 ### DSH Desktop 2.0.4
 
 DSH Desktop 2.0.4 内置 DeepSeek Harness 0.1.2-alpha.1。请从 DSH Desktop 打开 **DSH 终端**，确认终端顶部显示当前 Profile（默认是 `desktop`），然后执行：
 
 ```powershell
 $dir = Join-Path $HOME "dsh-plugins\dsh-raw-html"
-git clone https://github.com/plolpl789/dsh-raw-html.git $dir
+git clone --branch refactor/official-assistant-slot --single-branch https://github.com/j955229/dsh-raw-html.git $dir
 dsh plugin add $dir
 ```
 
@@ -48,7 +51,7 @@ dsh plugin add $dir
 
 ```powershell
 $dir = Join-Path $HOME "dsh-plugins\dsh-raw-html"
-git clone https://github.com/plolpl789/dsh-raw-html.git $dir
+git clone --branch refactor/official-assistant-slot --single-branch https://github.com/j955229/dsh-raw-html.git $dir
 dsh plugin --profile web add $dir
 ```
 
@@ -58,7 +61,7 @@ dsh plugin --profile web add $dir
 
 ```powershell
 $dir = Join-Path $HOME "dsh-plugins\dsh-raw-html"
-git -C $dir pull
+git -C $dir pull origin refactor/official-assistant-slot
 ```
 
 更新后重启 DSH。
