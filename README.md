@@ -87,6 +87,12 @@ onclick="input('回复内容')"
 
 用于把按钮内容填入输入框并发送。
 
+### 美学系统与字体
+
+`</>` → **美学系统** 可锁定、编辑或新建风格。字体下拉仅用于预览；编辑风格中的字体分类只影响后续生成，不会修改已有 VCP。
+
+外置字体目录在美学系统底部挂载。挂载后点击 **重新扫描**，可用字体会显示 `✓`；未安装字体不可选择。
+
 ## 兼容性
 
 DeepSeek Harness **0.1.2-alpha.1** 使用官方 `conversation.chat.node` / `assistant-step` slot，**不需要修改 frontend bundle，也不需要运行 patch 安装器**。
@@ -102,7 +108,7 @@ Legacy patch 会修改旧版 DSH 的 frontend bundle。DeepSeek Harness 0.1.2-al
 
 ## Trusted Mode
 
-Trusted Mode 默认关闭。插件加载后，页面右下角会显示 **「可信模式·关」** 徽章；点击后会切换为 **「可信模式·开」** 并刷新页面。
+Trusted Mode 默认关闭，并已整合进输入框旁 `</>` → **VCP 渲染设置** 面板，不再单独显示右下角悬浮徽章。
 
 开启后会放宽 HTML 限制，允许模型输出中的脚本和嵌入内容使用 `script`、`iframe`、`object`、`embed`、WebGL、`fetch` 等能力。
 
