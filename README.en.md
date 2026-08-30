@@ -32,7 +32,7 @@ Supports SVG, Mermaid, KaTeX, bundled fonts, interactive buttons, and an optiona
 DSH Desktop 2.0.4 ships DeepSeek Harness 0.1.2-alpha.1. Open **DSH Terminal** from DSH Desktop, confirm the active Profile shown at the top (the default is `desktop`), then run:
 
 ```powershell
-git clone --branch refactor/official-assistant-slot --single-branch https://github.com/j955229/dsh-raw-html.git "$HOME\dsh-plugins\dsh-raw-html"; dsh plugin add "$HOME\dsh-plugins\dsh-raw-html"
+dsh plugin add "github:j955229/dsh-raw-html#refactor/official-assistant-slot"
 ```
 
 Inside the DSH Desktop terminal, a `dsh plugin` command **without `--profile` targets the currently active Desktop profile**. `--profile web` targets the Web profile instead, not the active Desktop profile.
@@ -42,8 +42,6 @@ Then:
 1. Fully quit and restart DSH Desktop.
 2. Find the `</>` button next to the composer.
 3. Enable **Render HTML**. Enable **Aesthetic injection** only when you also want the agent to proactively use the VCP visual style.
-
-The local plugin is installed as a link, so keep `$HOME\dsh-plugins\dsh-raw-html`.
 
 ### DSH Web / CLI profile
 
@@ -57,9 +55,16 @@ Restart the DSH service and refresh the browser.
 
 ### Update
 
+Current DSH Desktop profile:
+
 ```powershell
-$dir = Join-Path $HOME "dsh-plugins\dsh-raw-html"
-git -C $dir pull origin refactor/official-assistant-slot
+dsh plugin update dsh-raw-html
+```
+
+Web profile:
+
+```powershell
+dsh plugin --profile web update dsh-raw-html
 ```
 
 Restart DSH after updating.
@@ -117,12 +122,6 @@ DSH Web / CLI profile:
 
 ```powershell
 dsh plugin --profile web remove dsh-raw-html
-```
-
-After the plugin has been removed, you may delete the local checkout:
-
-```powershell
-Remove-Item -Recurse -Force (Join-Path $HOME "dsh-plugins\dsh-raw-html")
 ```
 
 If you previously used the legacy patch on an older DSH build, also restore the frontend bundle from the backup created by the installer.
