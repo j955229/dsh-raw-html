@@ -46,9 +46,7 @@ dsh plugin add "github:j955229/dsh-raw-html#refactor/official-assistant-slot"
 ### DSH Web / CLI profile
 
 ```powershell
-$dir = Join-Path $HOME "dsh-plugins\dsh-raw-html"
-git clone --branch refactor/official-assistant-slot --single-branch https://github.com/j955229/dsh-raw-html.git $dir
-dsh plugin --profile web add $dir
+dsh plugin --profile web add "github:j955229/dsh-raw-html#refactor/official-assistant-slot"
 ```
 
 然后重启 DSH 服务并刷新浏览器。
