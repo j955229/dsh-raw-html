@@ -29,6 +29,8 @@
 
 ### DSH Desktop 2.0.4
 
+> **如果已经安装过旧版 `dsh-raw-html`：先从托盘完全退出 DSH Desktop，再执行 `dsh plugin remove dsh-raw-html`，然后再安装本分支。Windows 下直接覆盖正在加载的旧插件可能触发 `ERR_PNPM_EPERM`。**
+
 DSH Desktop 2.0.4 内置 DeepSeek Harness 0.1.2-alpha.1。请从 DSH Desktop 打开 **DSH 终端**，确认终端顶部显示当前 Profile（默认是 `desktop`），然后执行：
 
 ```powershell
