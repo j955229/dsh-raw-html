@@ -6,6 +6,14 @@
 
 **[English](./README.en.md)**
 
+## 效果展示
+
+![效果图 1](docs/images/banner-1.jpg)
+![效果图 2](docs/images/banner-2.jpg)
+![效果图 3](docs/images/banner-3.jpg)
+![效果图 4](docs/images/banner-4.jpg)
+![效果图 5](docs/images/banner-5.jpg)
+
 ## 安装
 
 ### DSH Desktop
