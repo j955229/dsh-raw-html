@@ -96,7 +96,8 @@ Open **Settings → VCP Rendering → Aesthetics** to lock, edit, or create styl
 The font picker now lists only fonts that are actually available:
 
 - bundled fonts appear automatically;
-- on DSH Desktop, **Choose folder** uses Desktop's own native system folder picker; users may also enter a font folder or a single font file path manually;
+- on DSH Desktop, **Choose folder** mounts a directory and intentionally shows folders only;
+- **Choose font file** opens a native file picker for `.ttf / .otf / .woff / .woff2 / .ttc`; users may also enter a font folder or a single font file path manually;
 - every mounted font source is listed separately and can be unmounted with its `✕` button;
 - folders are scanned recursively for `.ttf / .otf / .woff / .woff2 / .ttc`, and individual font files can also be mounted directly;
 - fonts do not need to be pre-registered in `DESIGN.md`;
