@@ -32,7 +32,7 @@
 DSH Desktop 2.0.4 内置 DeepSeek Harness 0.1.2-alpha.1。请从 DSH Desktop 打开 **DSH 终端**，确认终端顶部显示当前 Profile（默认是 `desktop`），然后执行：
 
 ```powershell
-git clone --branch refactor/official-assistant-slot --single-branch https://github.com/j955229/dsh-raw-html.git "$HOME\dsh-plugins\dsh-raw-html"; dsh plugin add "$HOME\dsh-plugins\dsh-raw-html"
+dsh plugin add "github:j955229/dsh-raw-html#refactor/official-assistant-slot"
 ```
 
 在 DSH Desktop 自带终端里，**不带 `--profile` 的 `dsh plugin` 命令会安装到当前激活的 Desktop profile**。`--profile web` 会改到 Web profile，不是 Desktop 当前 profile。
@@ -42,8 +42,6 @@ git clone --branch refactor/official-assistant-slot --single-branch https://gith
 1. 完全退出并重新启动 DSH Desktop。
 2. 在输入框旁找到 `</>` 按钮。
 3. 打开“渲染 HTML”；需要模型主动采用视觉排版时，再打开“美学注入”。
-
-本地插件通过 link 方式安装，请保留 `$HOME\dsh-plugins\dsh-raw-html` 目录。
 
 ### DSH Web / CLI profile
 
@@ -57,9 +55,16 @@ dsh plugin --profile web add $dir
 
 ### 更新
 
+DSH Desktop 当前 profile：
+
 ```powershell
-$dir = Join-Path $HOME "dsh-plugins\dsh-raw-html"
-git -C $dir pull origin refactor/official-assistant-slot
+dsh plugin update dsh-raw-html
+```
+
+Web profile：
+
+```powershell
+dsh plugin --profile web update dsh-raw-html
 ```
 
 更新后重启 DSH。
@@ -117,12 +122,6 @@ DSH Web / CLI profile：
 
 ```powershell
 dsh plugin --profile web remove dsh-raw-html
-```
-
-确认不再使用后，可手动删除：
-
-```powershell
-Remove-Item -Recurse -Force (Join-Path $HOME "dsh-plugins\dsh-raw-html")
 ```
 
 如果旧版 DSH 曾运行过 legacy patch，还需要按安装器生成的备份恢复被修改的 frontend bundle。
