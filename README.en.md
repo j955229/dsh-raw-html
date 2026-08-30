@@ -16,7 +16,7 @@ Supports SVG, Mermaid, KaTeX, bundled fonts, interactive buttons, and an optiona
 
 ## Changes from upstream 0.6.0
 
-- **No frontend patch on modern DSH**: VCP rendering now uses the official `conversation.chat.node / assistant-step` slot instead of modifying `dsh-web-frontend/dist`.
+- **DeepSeek Harness 0.1.2-alpha.1 support**: VCP rendering now uses the official `conversation.chat.node / assistant-step` slot instead of modifying `dsh-web-frontend/dist`.
 - **Works with DSH Desktop load order**: the plugin waits for a late `assistant-step` registration before installing its renderer.
 - **Native rendering stays intact**: plain Markdown continues to use the official DSH Assistant renderer; only `#vcp-root` content enters the VCP Shadow DOM.
 - **Trusted Mode no longer depends on the legacy bundle patch**: the modern plugin path directly supports script, iframe, WebGL, fetch, and related capabilities.
@@ -81,16 +81,16 @@ to fill the composer and send the reply.
 
 ## Compatibility
 
-DeepSeek Harness 0.1.2-alpha.1 and other modern DSH builds exposing the official `conversation.chat.node` / `assistant-step` slot **do not require frontend bundle patching and should not run the patch installer**.
+DeepSeek Harness **0.1.2-alpha.1** uses the official `conversation.chat.node` / `assistant-step` slot and **does not require frontend bundle patching or the patch installer**.
 
-Use the legacy patch only on an older DSH build that is known not to provide those official slots:
+DeepSeek Harness **0.1.1-rc.x and earlier** continue to use the legacy patch:
 
 ```powershell
 $dir = Join-Path $HOME "dsh-plugins\dsh-raw-html"
 node "$dir\patch\install-all.cjs"
 ```
 
-The legacy installer modifies the old DSH frontend bundle. Modern DSH should not use it.
+The legacy installer modifies the old DSH frontend bundle. DeepSeek Harness 0.1.2-alpha.1 should not use it.
 
 ## Trusted Mode
 
