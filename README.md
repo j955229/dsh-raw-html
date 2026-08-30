@@ -16,7 +16,7 @@
 
 ## 相比原版 0.6.0 的变化
 
-- **现代 DSH 不再需要打补丁**：直接使用官方 `conversation.chat.node / assistant-step` slot 渲染 VCP，不再修改 `dsh-web-frontend/dist`。
+- **适配 DeepSeek Harness 0.1.2-alpha.1**：直接使用官方 `conversation.chat.node / assistant-step` slot 渲染 VCP，不再修改 `dsh-web-frontend/dist`。
 - **兼容 DSH Desktop**：修复 `assistant-step` 晚注册时无法接管的问题，插件会等待官方 renderer 出现后再注册。
 - **普通消息不受影响**：普通 Markdown 继续使用 DSH 原生 Assistant renderer，只有 `#vcp-root` 进入 VCP Shadow DOM。
 - **Trusted Mode 不再依赖旧 bundle patch**：现代路径直接在插件内支持 script、iframe、WebGL、fetch 等能力。
@@ -81,16 +81,16 @@ onclick="input('回复内容')"
 
 ## 兼容性
 
-DeepSeek Harness 0.1.2-alpha.1 及其他提供官方 `conversation.chat.node` / `assistant-step` slot 的现代 DSH，**不需要修改 frontend bundle，也不需要运行 patch 安装器**。
+DeepSeek Harness **0.1.2-alpha.1** 使用官方 `conversation.chat.node` / `assistant-step` slot，**不需要修改 frontend bundle，也不需要运行 patch 安装器**。
 
-旧版 DSH 如果明确没有上述官方 slot，才使用 legacy patch：
+DeepSeek Harness **0.1.1-rc.x 及更早版本**继续使用 legacy patch：
 
 ```powershell
 $dir = Join-Path $HOME "dsh-plugins\dsh-raw-html"
 node "$dir\patch\install-all.cjs"
 ```
 
-Legacy patch 会修改旧版 DSH 的 frontend bundle。现代 DSH 不应运行它。
+Legacy patch 会修改旧版 DSH 的 frontend bundle。DeepSeek Harness 0.1.2-alpha.1 不应运行它。
 
 ## Trusted Mode
 
