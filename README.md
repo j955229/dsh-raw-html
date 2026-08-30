@@ -18,6 +18,7 @@
 
 - **适配 DeepSeek Harness 0.1.2-alpha.1**：直接使用官方 `conversation.chat.node / assistant-step` slot 渲染 VCP，不再修改 `dsh-web-frontend/dist`。
 - **兼容 DSH Desktop**：修复 `assistant-step` 晚注册时无法接管的问题，插件会等待官方 renderer 出现后再注册。
+- **原生设置页**：在支持 `settings.section` 的 DSH 中，插件设置直接进入 DSH 的“设置”导航，不再依赖聊天输入框旁的独立设置弹窗。
 - **普通消息不受影响**：普通 Markdown 继续使用 DSH 原生 Assistant renderer，只有 `#vcp-root` 进入 VCP Shadow DOM。
 - **Trusted Mode 不再依赖旧 bundle patch**：现代路径直接在插件内支持 script、iframe、WebGL、fetch 等能力。
 - **旧版 DSH 仍可用**：原有 legacy patch 保留，只作为旧环境兼容方案。
@@ -42,8 +43,8 @@ dsh plugin add "github:j955229/dsh-raw-html#refactor/official-assistant-slot"
 安装后：
 
 1. 完全退出并重新启动 DSH Desktop。
-2. 在输入框旁找到 `</>` 按钮。
-3. 打开“渲染 HTML”；需要模型主动采用视觉排版时，再打开“美学注入”。
+2. 打开 **设置 → VCP 渲染**。
+3. 开启“渲染 HTML”；需要模型主动采用视觉排版时，再开启“美学注入”。
 
 ### DSH Web / CLI profile
 
@@ -71,11 +72,12 @@ dsh plugin --profile web update dsh-raw-html
 
 ## 使用
 
-`</>` 按钮有三种状态：
+在 DeepSeek Harness 0.1.2-alpha.1 / DSH Desktop 2.0.4 中，插件设置已整合到 **设置 → VCP 渲染**：
 
-- `</> OFF`：关闭 HTML 渲染。
-- `</> 渲染`：只渲染 VCP HTML，不注入美学提示。
-- `</> ON`：渲染 HTML，同时向 agent 注入 VCP / 美学规范。
+- **渲染 HTML**：控制 VCP HTML 渲染。
+- **美学注入**：控制风格、色板、字体与装帧规范注入。
+- **可信模式**：控制 `script`、`iframe`、WebGL、`fetch` 等高级能力。
+- **美学系统**：管理主题、色板、字体预览与外置字体库。
 
 普通 Markdown 仍使用 DSH 原生渲染器。只有包含 `#vcp-root` 的内容会进入 VCP renderer。
 
@@ -89,9 +91,19 @@ onclick="input('回复内容')"
 
 ### 美学系统与字体
 
-`</>` → **美学系统** 可锁定、编辑或新建风格。字体下拉仅用于预览；编辑风格中的字体分类只影响后续生成，不会修改已有 VCP。
+进入 **设置 → VCP 渲染 → 打开美学系统** 可锁定、编辑或新建风格。
 
-外置字体目录在美学系统底部挂载。挂载后点击 **重新扫描**，可用字体会显示 `✓`；未安装字体不可选择。
+字体列表只显示插件当前**实际可用**的字体：
+
+- 插件内置字体会自动出现。
+- 用户可以挂载任意字体目录；插件会递归扫描其中的 `.ttf / .otf / .woff / .woff2 / .ttc`。
+- 不要求字体事先写进 `DESIGN.md`，也不要求目录结构与作者一致。
+- 不存在的字体不会出现在可选下拉框中。
+- 如果已保存的旧风格引用了后来缺失的字体，只会标记为当前不可用，不会重新放回可选列表。
+
+`DESIGN.md` 中的已知字体映射现在只用于：当实际扫描到同名字体文件时，为它保留较友好的既有别名；它不再决定字体下拉框里有什么。
+
+字体预览只用于查看效果；编辑风格中的字体分类影响后续生成，不会修改已有 VCP。
 
 ## 兼容性
 
@@ -108,7 +120,7 @@ Legacy patch 会修改旧版 DSH 的 frontend bundle。DeepSeek Harness 0.1.2-al
 
 ## Trusted Mode
 
-Trusted Mode 默认关闭，并已整合进输入框旁 `</>` → **VCP 渲染设置** 面板，不再单独显示右下角悬浮徽章。
+Trusted Mode 默认关闭，并已整合进 **设置 → VCP 渲染**，不再单独显示右下角悬浮徽章。
 
 开启后会放宽 HTML 限制，允许模型输出中的脚本和嵌入内容使用 `script`、`iframe`、`object`、`embed`、WebGL、`fetch` 等能力。
 
