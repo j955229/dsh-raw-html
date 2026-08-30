@@ -24,13 +24,16 @@ Supports SVG, Mermaid, KaTeX, bundled fonts, interactive buttons, and an optiona
 
 ## Install
 
+> This version has not yet been merged upstream. Install from `j955229/dsh-raw-html` branch `refactor/official-assistant-slot`.
+
+
 ### DSH Desktop 2.0.4
 
 DSH Desktop 2.0.4 ships DeepSeek Harness 0.1.2-alpha.1. Open **DSH Terminal** from DSH Desktop, confirm the active Profile shown at the top (the default is `desktop`), then run:
 
 ```powershell
 $dir = Join-Path $HOME "dsh-plugins\dsh-raw-html"
-git clone https://github.com/plolpl789/dsh-raw-html.git $dir
+git clone --branch refactor/official-assistant-slot --single-branch https://github.com/j955229/dsh-raw-html.git $dir
 dsh plugin add $dir
 ```
 
@@ -48,7 +51,7 @@ The local plugin is installed as a link, so keep `$HOME\dsh-plugins\dsh-raw-html
 
 ```powershell
 $dir = Join-Path $HOME "dsh-plugins\dsh-raw-html"
-git clone https://github.com/plolpl789/dsh-raw-html.git $dir
+git clone --branch refactor/official-assistant-slot --single-branch https://github.com/j955229/dsh-raw-html.git $dir
 dsh plugin --profile web add $dir
 ```
 
@@ -58,7 +61,7 @@ Restart the DSH service and refresh the browser.
 
 ```powershell
 $dir = Join-Path $HOME "dsh-plugins\dsh-raw-html"
-git -C $dir pull
+git -C $dir pull origin refactor/official-assistant-slot
 ```
 
 Restart DSH after updating.
